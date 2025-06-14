@@ -1,4 +1,4 @@
-import { NextAuthOptions } from "next-auth";
+import { NextAuthOptions, User as AdapterUser } from "next-auth"; // Import AdapterUser
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./db";
@@ -35,12 +35,13 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Explicitly cast the returned object to AdapterUser
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           image: user.image,
-        };
+        } as AdapterUser; // Cast to AdapterUser
       }
     })
   ],
@@ -53,6 +54,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        // user here is of type AdapterUser | User (from authorize)
         token.id = user.id;
       }
       return token;
