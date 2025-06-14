@@ -52,14 +52,14 @@ export default function CoursesPage() {
   };
 
   const calculateProgress = (course: Course) => {
-    const completed = course.assignments?.filter(a => a.completed).length || 0;
+    const completed = course.assignments?.filter((a) => a.completed).length || 0;
     return course.assignments?.length
       ? (completed / course.assignments.length) * 100
       : 0;
   };
 
   const getUpcomingAssignments = (course: Course) => {
-    return course.assignments?.filter(a => !a.completed).length || 0;
+    return course.assignments?.filter((a) => !a.completed).length || 0;
   };
 
   if (status === "loading" || loading) {
@@ -95,7 +95,8 @@ export default function CoursesPage() {
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {courses.map((course) => {
-            const progress = calculateProgress(course);
+            const rawProgress = calculateProgress(course);
+            const progress = Number.isFinite(rawProgress) ? rawProgress : 0;
             const upcomingAssignments = getUpcomingAssignments(course);
 
             return (
@@ -105,7 +106,10 @@ export default function CoursesPage() {
                     <div className="space-y-1">
                       <CardTitle className="text-lg">{course.name}</CardTitle>
                       <CardDescription className="flex items-center space-x-2">
-                        <Badge variant="outline" style={{ borderColor: course.color, color: course.color }}>
+                        <Badge
+                          variant="outline"
+                          style={{ borderColor: course.color, color: course.color }}
+                        >
                           {course.code}
                         </Badge>
                         <span>{course.credits} credits</span>
@@ -124,7 +128,7 @@ export default function CoursesPage() {
                     <Progress value={progress} className="h-2" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="gurid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center space-x-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">{course.instructor}</span>
@@ -173,7 +177,12 @@ export default function CoursesPage() {
             <CardContent>
               <div className="text-2xl font-bold">
                 {courses.length > 0
-                  ? (courses.reduce((sum, course) => sum + calculateProgress(course), 0) / courses.length).toFixed(1)
+                  ? (
+                      courses.reduce((sum, course) => {
+                        const raw = calculateProgress(course);
+                        return sum + (Number.isFinite(raw) ? raw : 0);
+                      }, 0) / courses.length
+                    ).toFixed(1)
                   : 0}
                 %
               </div>
