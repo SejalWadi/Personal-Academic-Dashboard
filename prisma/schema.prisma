@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Academic Info
+  studentId     String?   @unique
+  major         String?
+  year          String?
+  gpa           Float?
+  
+  // Relations
+  courses       Course[]
+  assignments   Assignment[]
+  grades        Grade[]
+  goals         Goal[]
+  
+  @@map("users")
+}
+
+model Course {
+  id            String    @id @default(cuid())
+  name          String
+  code          String
+  credits       Int       @default(3)
+  color         String    @default("#3B82F6")
+  semester      String
+  year          String
+  instructor    String?
+  schedule      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments   Assignment[]
+  grades        Grade[]
+  
+  @@map("courses")
+}
+
+model Assignment {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  type          String    // "assignment", "quiz", "exam", "project"
+  dueDate       DateTime
+  points        Int       @default(100)
+  completed     Boolean   @default(false)
+  priority      String    @default("medium") // "low", "medium", "high"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId      String
+  course        Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  grade         Grade?
+  
+  @@map("assignments")
+}
+
+model Grade {
+  id            String    @id @default(cuid())
+  score         Float
+  points        Int       @default(100)
+  percentage    Float
+  letterGrade   String?
+  feedback      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId      String
+  course        Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  assignmentId  String    @unique
+  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  
+  @@map("grades")
+}
+
+model Goal {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  category      String    // "academic", "career", "personal"
+  targetDate    DateTime?
+  completed     Boolean   @default(false)
+  priority      String    @default("medium")
+  progress      Int       @default(0) // 0-100
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("goals")
+}
