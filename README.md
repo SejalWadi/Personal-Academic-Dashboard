@@ -193,4 +193,4 @@ Special thanks to the open-source community behind:
 
 ---
 
-*Need this in a downloadable format or a matching deployment guide? Feel free to ask!*
+<!-- *Need this in a downloadable format or a matching deployment guide? Feel free to ask!* -->
