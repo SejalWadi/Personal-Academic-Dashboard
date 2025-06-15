@@ -2,9 +2,9 @@
 
 **EduTrack** is a full-stack academic management platform built with modern web technologies. It empowers students to track courses, manage assignments, view grade analytics, and stay on top of their academic goals – all in one responsive dashboard.
 
-## 📸 Screenshots
+<!-- ## 📸 Screenshots
 
-*Screenshots coming soon...*
+*Screenshots coming soon...* -->
 
 ## ✨ Features
 
