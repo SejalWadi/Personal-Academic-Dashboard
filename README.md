@@ -1,203 +1,196 @@
-# EduTrack - Personal Academic Dashboard
+# 🎓 EduTrack – Personal Academic Dashboard
 
-A comprehensive full-stack Next.js application for managing academic life, built with modern web technologies.
+**EduTrack** is a full-stack academic management platform built with modern web technologies. It empowers students to track courses, manage assignments, view grade analytics, and stay on top of their academic goals – all in one responsive dashboard.
+
+## 📸 Screenshots
+
+*Screenshots coming soon...*
+
+## ✨ Features
+
+### 📚 Academic Management
+- **Course Tracker**: Add, edit, and view academic courses
+- **Assignment Dashboard**: Track, manage, and complete upcoming assignments
+- **Grade Tracker**: Input grades and compare with class averages
+- **Calendar View**: Visualize assignment deadlines by date
+
+### 🔐 User Authentication
+- Secure login and registration with NextAuth.js
+- JWT-based sessions and password hashing via bcryptjs
+
+### 📊 Real-Time Analytics
+- Dynamic dashboards showing performance metrics
+- Progress bars for assignment completion
+- Grade trends with Recharts
+
+### 🎨 Responsive & Modern UI
+- Tailwind CSS + Shadcn/UI for clean, responsive layouts
+- Smooth animations via Framer Motion
+- Supports dark and light themes
+
+## ⚙️ Tech Stack
+
+### Frontend
+- **Framework**: Next.js 14 App Router
+- **Styling**: Tailwind CSS, shadcn/ui, Aceternity UI
+- **State Management**: React Hooks, useSession from NextAuth
+- **Charts**: Recharts
+
+### Backend
+- **Framework**: Next.js API routes
+- **ORM**: Prisma ORM
+- **Authentication**: NextAuth.js (credentials provider)
+- **Database**: MongoDB Atlas (or local SQLite for dev)
+
+## 🏗️ Project Architecture
+
+```
+├── app/
+│   ├── api/               # Next.js API endpoints
+│   ├── dashboard/         # Dashboard UI routes
+│   └── auth/              # Auth pages (login/register)
+├── components/
+│   ├── dashboard/         # Dashboard widgets
+│   ├── auth/              # Auth components
+│   ├── ui/                # UI elements (shadcn)
+│   └── aceternity/        # UI utilities
+├── lib/
+│   ├── auth.ts            # NextAuth configuration
+│   ├── prisma.ts          # Prisma client
+│   ├── api.ts             # API client helpers
+│   └── types.ts           # TypeScript types
+├── prisma/
+│   ├── schema.prisma      # DB schema
+│   └── seed.ts            # DB seeder
+└── public/                # Static assets
+```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ installed
-- npm or yarn package manager
+- Node.js 18+
+- MongoDB Atlas or SQLite (for local development)
+- npm or yarn
 
 ### 1. Install Dependencies
 ```bash
 npm install
 ```
 
-### 2. Set up Environment Variables
-Create a `.env.local` file in the root directory:
-```bash
-# Database
-DATABASE_URL="file:./dev.db"
+### 2. Configure Environment Variables
+Create `.env.local`:
+```env
+# MongoDB or SQLite
+DATABASE_URL="your-db-url"
 
-# NextAuth Configuration
+# NextAuth
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key-here"
+NEXTAUTH_SECRET="your-secret"
 ```
 
-### 3. Set up Database
+### 3. Initialize the Database
 ```bash
-# Generate Prisma client
 npx prisma generate
-
-# Create and migrate database
 npm run db:push
-
-# Seed database with demo data
 npm run db:seed
 ```
 
-### 4. Run the Application
+### 4. Start the Dev Server
 ```bash
-# Start development server (runs both frontend and backend)
 npm run dev
 ```
 
-The application will be available at: **http://localhost:3000**
+Your app is running at: **http://localhost:3000**
 
-## 🔐 Demo Login
-- **Email**: `demo@example.com`
-- **Password**: `demo123`
+## 🧪 Demo Login
+- **Email**: demo@example.com
+- **Password**: demo123
 
-## 📁 Project Architecture
+## 🔄 Key API Endpoints
 
-This is a **full-stack Next.js application** where:
-- **Frontend**: React components with Tailwind CSS and shadcn/ui
-- **Backend**: Next.js API routes with Prisma ORM
-- **Database**: SQLite (easily switchable to PostgreSQL/MySQL)
-- **Authentication**: NextAuth.js with credentials provider
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/courses` | Fetch all courses |
+| POST | `/api/courses` | Create a course |
+| GET | `/api/assignments` | List assignments |
+| POST | `/api/assignments` | Create new assignment |
+| PATCH | `/api/assignments/:id` | Update assignment |
+| GET | `/api/grades` | Get user & class grades |
+| POST | `/api/grades` | Add a new grade |
+| POST | `/api/register` | Register a new user |
+| GET/POST | `/api/auth/[...nextauth]` | NextAuth session API |
 
-### Frontend & Backend Integration
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   API Routes    │    │   Database      │
-│   (React)       │───▶│   (Next.js)     │───▶│   (SQLite)      │
-│                 │    │                 │    │                 │
-│ - Components    │    │ - /api/courses  │    │ - Users         │
-│ - Pages         │    │ - /api/assignments│  │ - Courses       │
-│ - Hooks         │    │ - /api/auth     │    │ - Assignments   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-## 🛠 Available Scripts
+## 🧑‍💻 Development Scripts
 
 ```bash
-# Development
-npm run dev          # Start development server
+npm run dev          # Start dev server
 npm run build        # Build for production
 npm run start        # Start production server
 npm run lint         # Run ESLint
-
-# Database
 npm run db:push      # Push schema changes to database
-npm run db:seed      # Seed database with demo data
+npm run db:seed      # Seed demo data
 ```
 
-## 📊 Features
+## 🔐 Security Highlights
 
-### ✅ Implemented Features
-- **User Authentication**: Registration, login, session management
-- **Course Management**: Add, view, and track courses
-- **Assignment Tracking**: Create, manage, and complete assignments
-- **Dashboard Analytics**: Real-time statistics and progress tracking
-- **Calendar View**: Visual assignment deadlines
-- **Grade Management**: Track and analyze academic performance
-- **Responsive Design**: Works on desktop, tablet, and mobile
+- 🔒 Password hashing with bcrypt
+- ✅ Form validation using Zod
+- 🔑 JWT session management with NextAuth
+- 🚫 CSRF & session tampering protection
 
-### 🔄 API Endpoints
-- `GET/POST /api/courses` - Course management
-- `GET/POST/PATCH /api/assignments` - Assignment operations
-- `GET /api/dashboard/stats` - Dashboard statistics
-- `GET/POST /api/grades` - Grade management
-- `POST /api/register` - User registration
-- `/api/auth/[...nextauth]` - Authentication endpoints
+## 🛠️ Adding New Features
 
-## 🏗 File Structure
+1. Update Prisma schema in `prisma/schema.prisma`
+2. Create relevant API route under `app/api/`
+3. Build UI components in `components/`
+4. Connect via frontend page in `app/`
+5. Add/update types in `lib/types.ts`
 
-```
-├── app/
-│   ├── api/                 # Backend API routes
-│   │   ├── auth/           # Authentication
-│   │   ├── courses/        # Course management
-│   │   ├── assignments/    # Assignment management
-│   │   ├── grades/         # Grade management
-│   │   └── dashboard/      # Dashboard stats
-│   ├── dashboard/          # Dashboard pages
-│   ├── auth/              # Authentication pages
-│   └── globals.css        # Global styles
-├── components/
-│   ├── ui/                # shadcn/ui components
-│   ├── dashboard/         # Dashboard components
-│   ├── auth/             # Authentication components
-│   └── aceternity/       # Aceternity UI components
-├── lib/
-│   ├── auth.ts           # NextAuth configuration
-│   ├── db.ts             # Database client
-│   ├── api.ts            # API utility functions
-│   └── types.ts          # TypeScript types
-├── prisma/
-│   ├── schema.prisma     # Database schema
-│   └── seed.ts           # Database seeding
-└── package.json
-```
+## 🌐 Deployment
 
-## 🔧 Development Workflow
-
-### Adding New Features
-1. **Database Changes**: Update `prisma/schema.prisma`
-2. **API Routes**: Create new routes in `app/api/`
-3. **Frontend Components**: Add components in `components/`
-4. **Pages**: Create pages in `app/`
-5. **Types**: Update `lib/types.ts`
-
-### Switching from Mock to Real Data
-Replace mock data calls in components:
-```typescript
-// Before (Mock Data)
-const loadAssignments = async () => {
-  const mockAssignments = [...];
-  setAssignments(mockAssignments);
-};
-
-// After (Real API)
-const loadAssignments = async () => {
-  try {
-    const { assignments } = await assignmentApi.getAll(filter);
-    setAssignments(assignments);
-  } catch (error) {
-    console.error('Failed to load assignments:', error);
-  }
-};
-```
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
+### Deploy on Vercel
 1. Push code to GitHub
-2. Connect repository to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy automatically
+2. Import repo on [vercel.com](https://vercel.com)
+3. Add required environment variables
+4. Deploy with 1-click
 
-### Other Platforms
-- **Netlify**: Configure build settings
-- **Railway**: Add PostgreSQL database
-- **Heroku**: Use PostgreSQL add-on
+### Other Options
+- **Netlify**: Supports Next.js 14+
+- **Render / Railway / Heroku**: Add custom MongoDB support
 
-## 🔒 Security Features
-- Password hashing with bcryptjs
-- Session-based authentication
-- Input validation with Zod
-- User authorization checks
-- CSRF protection
+## 🗺️ Roadmap
 
-## 📱 Responsive Design
-- Mobile-first approach
-- Tailwind CSS breakpoints
-- Touch-friendly interfaces
-- Optimized for all screen sizes
-
-## 🎨 UI/UX Features
-- Modern design with shadcn/ui
-- Smooth animations with Framer Motion
-- Interactive charts with Recharts
-- Beautiful gradients and effects
-- Dark/light mode support (configurable)
+- [ ] 📅 Assignment Reminders
+- [ ] 📱 Mobile PWA Support
+- [ ] 📈 Weekly Study Stats & Trends
+- [ ] 🧠 AI Assistant for Study Suggestions
+- [ ] 📬 Email Notifications for Due Dates
+- [ ] 🔎 Search & Filter Across Courses
 
 ## 🤝 Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+
+1. Fork the repo
+2. Create a new feature branch
+3. Commit & push your changes
+4. Submit a Pull Request
+
+Please ensure tests pass and follow ESLint + Prettier formatting guidelines.
 
 ## 📄 License
-MIT License - feel free to use this project for learning and development.
+
+MIT License — Free to use for personal, educational, and commercial use.
+
+## 🙌 Credits
+
+Built with ❤️ by **Sejal Wadibhasme**
+
+Special thanks to the open-source community behind:
+- [Next.js](https://nextjs.org/)
+- [Prisma](https://www.prisma.io/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Recharts](https://recharts.org/)
+- [NextAuth.js](https://next-auth.js.org/)
+
+---
+
+*Need this in a downloadable format or a matching deployment guide? Feel free to ask!*
