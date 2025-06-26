@@ -13,9 +13,16 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         try {
+          console.log("Auth attempt for:", credentials?.email);
+          
           if (!credentials?.email || !credentials?.password) {
+            console.log("Missing credentials");
             return null;
           }
+
+          // Test database connection
+          await prisma.$connect();
+          console.log("Database connected successfully");
 
           const user = await prisma.user.findUnique({
             where: {
@@ -24,8 +31,11 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user) {
+            console.log("User not found:", credentials.email);
             return null;
           }
+
+          console.log("User found:", user.email);
 
           const isPasswordValid = await bcrypt.compare(
             credentials.password,
@@ -33,8 +43,11 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (!isPasswordValid) {
+            console.log("Invalid password for:", credentials.email);
             return null;
           }
+
+          console.log("Authentication successful for:", user.email);
 
           return {
             id: user.id,
@@ -44,16 +57,27 @@ export const authOptions: NextAuthOptions = {
           } as AdapterUser;
         } catch (error) {
           console.error("Auth error:", error);
+          
+          // More specific error logging
+          if (error instanceof Error) {
+            console.error("Error message:", error.message);
+            console.error("Error stack:", error.stack);
+          }
+          
           return null;
+        } finally {
+          await prisma.$disconnect();
         }
       }
     })
   ],
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: "/auth/signin",
+    error: "/auth/signin", // Redirect errors to signin page
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -70,4 +94,5 @@ export const authOptions: NextAuthOptions = {
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
 };

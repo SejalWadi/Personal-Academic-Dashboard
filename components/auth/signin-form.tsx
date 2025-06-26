@@ -22,6 +22,8 @@ export default function SignInForm() {
     setIsLoading(true);
     setError("");
 
+    console.log("Sign in attempt for:", email);
+
     try {
       const result = await signIn("credentials", {
         email,
@@ -29,13 +31,21 @@ export default function SignInForm() {
         redirect: false,
       });
 
+      console.log("Sign in result:", result);
+
       if (result?.error) {
-        setError("Invalid email or password");
-      } else {
+        console.error("Sign in error:", result.error);
+        setError("Invalid email or password. Please try again.");
+      } else if (result?.ok) {
+        console.log("Sign in successful, redirecting...");
         router.push("/dashboard");
+        router.refresh();
+      } else {
+        setError("An unexpected error occurred. Please try again.");
       }
     } catch (error) {
-      setError("An error occurred. Please try again.");
+      console.error("Sign in exception:", error);
+      setError("Network error. Please check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -88,8 +98,14 @@ export default function SignInForm() {
           )}
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Sign In
+            {isLoading ? "Signing In..." : "Sign In"}
           </Button>
+          
+          <div className="mt-4 p-3 bg-muted rounded-md">
+            <p className="text-sm text-muted-foreground text-center mb-2">Demo Account:</p>
+            <p className="text-xs text-center">Email: demo@example.com</p>
+            <p className="text-xs text-center">Password: demo123</p>
+          </div>
         </form>
       </CardContent>
     </Card>
