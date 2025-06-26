@@ -2,10 +2,6 @@
 
 **EduTrack** is a full-stack academic management platform built with modern web technologies. It empowers students to track courses, manage assignments, view grade analytics, and stay on top of their academic goals – all in one responsive dashboard.
 
-<!-- ## 📸 Screenshots
-
-*Screenshots coming soon...* -->
-
 ## ✨ Features
 
 ### 📚 Academic Management
@@ -40,36 +36,13 @@
 - **Framework**: Next.js API routes
 - **ORM**: Prisma ORM
 - **Authentication**: NextAuth.js (credentials provider)
-- **Database**: MongoDB Atlas (or local SQLite for dev)
-
-## 🏗️ Project Architecture
-
-```
-├── app/
-│   ├── api/               # Next.js API endpoints
-│   ├── dashboard/         # Dashboard UI routes
-│   └── auth/              # Auth pages (login/register)
-├── components/
-│   ├── dashboard/         # Dashboard widgets
-│   ├── auth/              # Auth components
-│   ├── ui/                # UI elements (shadcn)
-│   └── aceternity/        # UI utilities
-├── lib/
-│   ├── auth.ts            # NextAuth configuration
-│   ├── prisma.ts          # Prisma client
-│   ├── api.ts             # API client helpers
-│   └── types.ts           # TypeScript types
-├── prisma/
-│   ├── schema.prisma      # DB schema
-│   └── seed.ts            # DB seeder
-└── public/                # Static assets
-```
+- **Database**: PostgreSQL (production) / SQLite (development)
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 18+
-- MongoDB Atlas or SQLite (for local development)
+- PostgreSQL database (for production) or SQLite (for development)
 - npm or yarn
 
 ### 1. Install Dependencies
@@ -80,18 +53,18 @@ npm install
 ### 2. Configure Environment Variables
 Create `.env.local`:
 ```env
-# MongoDB or SQLite
-DATABASE_URL="your-db-url"
+# Database - Use PostgreSQL for production
+DATABASE_URL="postgresql://username:password@localhost:5432/edutrack"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret"
+NEXTAUTH_SECRET="your-super-secret-key-here"
 ```
 
 ### 3. Initialize the Database
 ```bash
 npx prisma generate
-npm run db:push
+npx prisma db push
 npm run db:seed
 ```
 
@@ -105,6 +78,46 @@ Your app is running at: **http://localhost:3000**
 ## 🧪 Demo Login
 - **Email**: demo@example.com
 - **Password**: demo123
+
+## 🌐 Deployment on Vercel
+
+### 1. Database Setup
+You'll need a PostgreSQL database. Recommended providers:
+- **Neon** (free tier available): https://neon.tech
+- **Supabase** (free tier available): https://supabase.com
+- **PlanetScale** (free tier available): https://planetscale.com
+- **Railway** (free tier available): https://railway.app
+
+### 2. Environment Variables in Vercel
+Add these environment variables in your Vercel dashboard:
+
+```env
+DATABASE_URL="your-postgresql-connection-string"
+NEXTAUTH_URL="https://your-app-name.vercel.app"
+NEXTAUTH_SECRET="your-super-secret-key-here"
+```
+
+**Important**: Generate a strong secret for `NEXTAUTH_SECRET`:
+```bash
+openssl rand -base64 32
+```
+
+### 3. Deploy
+1. Push your code to GitHub
+2. Import the repository in Vercel
+3. Add the environment variables
+4. Deploy
+
+The build process will automatically:
+- Generate Prisma client
+- Push database schema
+- Build the application
+
+### 4. Seed the Database (Optional)
+After deployment, you can seed the database by running:
+```bash
+npm run db:seed
+```
 
 ## 🔄 Key API Endpoints
 
@@ -138,25 +151,21 @@ npm run db:seed      # Seed demo data
 - 🔑 JWT session management with NextAuth
 - 🚫 CSRF & session tampering protection
 
-## 🛠️ Adding New Features
+## 🛠️ Troubleshooting
 
-1. Update Prisma schema in `prisma/schema.prisma`
-2. Create relevant API route under `app/api/`
-3. Build UI components in `components/`
-4. Connect via frontend page in `app/`
-5. Add/update types in `lib/types.ts`
+### Database Connection Issues
+If you're getting database connection errors:
 
-## 🌐 Deployment
+1. **Check your DATABASE_URL**: Ensure it's correctly formatted
+2. **Verify database accessibility**: Make sure your database allows connections from Vercel
+3. **Check environment variables**: Ensure they're set correctly in Vercel dashboard
 
-### Deploy on Vercel
-1. Push code to GitHub
-2. Import repo on [vercel.com](https://vercel.com)
-3. Add required environment variables
-4. Deploy with 1-click
+### Build Issues
+If the build fails:
 
-### Other Options
-- **Netlify**: Supports Next.js 14+
-- **Render / Railway / Heroku**: Add custom MongoDB support
+1. **Check Prisma schema**: Ensure it's valid
+2. **Verify environment variables**: Make sure DATABASE_URL is set during build
+3. **Check logs**: Review Vercel build logs for specific errors
 
 ## 🗺️ Roadmap
 
@@ -182,7 +191,7 @@ MIT License — Free to use for personal, educational, and commercial use.
 
 ## 🙌 Credits
 
-Built with ❤️ by **Sejal Wadibhasme**
+Built with ❤️ by **Your Name**
 
 Special thanks to the open-source community behind:
 - [Next.js](https://nextjs.org/)
@@ -192,5 +201,3 @@ Special thanks to the open-source community behind:
 - [NextAuth.js](https://next-auth.js.org/)
 
 ---
-
-<!-- *Need this in a downloadable format or a matching deployment guide? Feel free to ask!* -->
