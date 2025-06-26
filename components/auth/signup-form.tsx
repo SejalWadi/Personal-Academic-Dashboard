@@ -23,13 +23,23 @@ export default function SignUpForm() {
     setIsLoading(true);
     setError("");
 
+    console.log("Form submission started");
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       setIsLoading(false);
       return;
     }
 
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      setIsLoading(false);
+      return;
+    }
+
     try {
+      console.log("Sending registration request...");
+      
       const response = await fetch("/api/register", {
         method: "POST",
         headers: {
@@ -38,14 +48,21 @@ export default function SignUpForm() {
         body: JSON.stringify({ name, email, password }),
       });
 
+      console.log("Response status:", response.status);
+      
+      const data = await response.json();
+      console.log("Response data:", data);
+
       if (response.ok) {
+        console.log("Registration successful, redirecting...");
         router.push("/auth/signin?message=Account created successfully");
       } else {
-        const data = await response.json();
-        setError(data.error || "An error occurred");
+        console.error("Registration failed:", data.error);
+        setError(data.error || "Registration failed. Please try again.");
       }
     } catch (error) {
-      setError("An error occurred. Please try again.");
+      console.error("Network error:", error);
+      setError("Network error. Please check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -73,6 +90,7 @@ export default function SignUpForm() {
                 onChange={(e) => setName(e.target.value)}
                 className="pl-10"
                 required
+                minLength={2}
               />
             </div>
           </div>
@@ -98,11 +116,12 @@ export default function SignUpForm() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Create a password"
+                placeholder="Create a password (min 6 characters)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10"
                 required
+                minLength={6}
               />
             </div>
           </div>
@@ -118,6 +137,7 @@ export default function SignUpForm() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="pl-10"
                 required
+                minLength={6}
               />
             </div>
           </div>
@@ -128,7 +148,7 @@ export default function SignUpForm() {
           )}
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Account
+            {isLoading ? "Creating Account..." : "Create Account"}
           </Button>
         </form>
       </CardContent>
