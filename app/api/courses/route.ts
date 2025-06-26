@@ -17,10 +17,23 @@ const courseSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("Courses API: Starting request");
+    
     const session = await getServerSession(authOptions);
+    console.log("Courses API: Session check", { hasSession: !!session, userId: session?.user?.id });
     
     if (!session?.user?.id) {
+      console.log("Courses API: Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Test database connection
+    try {
+      await prisma.$connect();
+      console.log("Courses API: Database connected");
+    } catch (dbError) {
+      console.error("Courses API: Database connection failed:", dbError);
+      return NextResponse.json({ error: "Database connection failed" }, { status: 500 });
     }
 
     const courses = await prisma.course.findMany({
@@ -36,18 +49,25 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ courses });
+    console.log("Courses API: Found courses", { count: courses.length });
+
+    // Return courses directly as an array, not wrapped in an object
+    return NextResponse.json(courses);
   } catch (error) {
-    console.error("Error fetching courses:", error);
+    console.error("Courses API: Error fetching courses:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("Courses API: Creating course");
+    
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
@@ -82,5 +102,7 @@ export async function POST(request: NextRequest) {
       { error: "Internal server error" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
