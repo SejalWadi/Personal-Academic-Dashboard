@@ -46,11 +46,23 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    console.error("Registration error:", error);
+    
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
         { status: 400 }
       );
+    }
+
+    // Check for database connection errors
+    if (error instanceof Error) {
+      if (error.message.includes('connect') || error.message.includes('database')) {
+        return NextResponse.json(
+          { error: "Database connection error. Please try again later." },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json(
