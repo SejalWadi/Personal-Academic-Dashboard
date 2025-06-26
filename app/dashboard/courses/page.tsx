@@ -4,7 +4,13 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/dashboard/header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -14,7 +20,7 @@ import { BookOpen, Users, Clock, Plus } from "lucide-react";
 export default function CoursesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<Course[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -32,12 +38,7 @@ export default function CoursesPage() {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch("/api/courses", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await fetch("/api/courses");
 
       if (!res.ok) throw new Error("Failed to fetch courses");
 
@@ -93,70 +94,75 @@ export default function CoursesPage() {
           </Button>
         </div>
 
+        {/* Courses List */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => {
-            const rawProgress = calculateProgress(course);
-            const progress = Number.isFinite(rawProgress) ? rawProgress : 0;
-            const upcomingAssignments = getUpcomingAssignments(course);
+          {Array.isArray(courses) && courses.length > 0 ? (
+            courses.map((course) => {
+              const rawProgress = calculateProgress(course);
+              const progress = Number.isFinite(rawProgress) ? rawProgress : 0;
+              const upcomingAssignments = getUpcomingAssignments(course);
 
-            return (
-              <Card key={course.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg">{course.name}</CardTitle>
-                      <CardDescription className="flex items-center space-x-2">
-                        <Badge
-                          variant="outline"
-                          style={{ borderColor: course.color, color: course.color }}
-                        >
-                          {course.code}
-                        </Badge>
-                        <span>{course.credits} credits</span>
-                      </CardDescription>
+              return (
+                <Card key={course.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{course.name}</CardTitle>
+                        <CardDescription className="flex items-center space-x-2">
+                          <Badge
+                            variant="outline"
+                            style={{ borderColor: course.color, color: course.color }}
+                          >
+                            {course.code}
+                          </Badge>
+                          <span>{course.credits} credits</span>
+                        </CardDescription>
+                      </div>
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: course.color }} />
                     </div>
-                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: course.color }} />
-                  </div>
-                </CardHeader>
+                  </CardHeader>
 
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Progress</span>
-                      <span className="font-medium">{progress.toFixed(0)}%</span>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Progress</span>
+                        <span className="font-medium">{progress.toFixed(0)}%</span>
+                      </div>
+                      <Progress value={progress} className="h-2" />
                     </div>
-                    <Progress value={progress} className="h-2" />
-                  </div>
 
-                  <div className="gurid grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{course.instructor}</span>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">{course.instructor}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          {course.schedule?.split(" ")[0]}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {course.schedule?.split(" ")[0]}
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <BookOpen className="h-4 w-4" />
-                      <span>{upcomingAssignments} pending</span>
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                        <BookOpen className="h-4 w-4" />
+                        <span>{upcomingAssignments} pending</span>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        View Details
+                      </Button>
                     </div>
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })
+          ) : (
+            <p className="text-muted-foreground col-span-full">No courses found.</p>
+          )}
         </div>
 
-        {/* Stats */}
+        {/* Stats Section */}
         <div className="grid gap-6 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
@@ -164,7 +170,9 @@ export default function CoursesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {courses.reduce((sum, course) => sum + course.credits, 0)}
+                {Array.isArray(courses)
+                  ? courses.reduce((sum, course) => sum + course.credits, 0)
+                  : 0}
               </div>
               <p className="text-xs text-muted-foreground">Enrolled this semester</p>
             </CardContent>
@@ -176,7 +184,7 @@ export default function CoursesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {courses.length > 0
+                {Array.isArray(courses) && courses.length > 0
                   ? (
                       courses.reduce((sum, course) => {
                         const raw = calculateProgress(course);
@@ -196,7 +204,9 @@ export default function CoursesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {courses.reduce((sum, course) => sum + getUpcomingAssignments(course), 0)}
+                {Array.isArray(courses)
+                  ? courses.reduce((sum, course) => sum + getUpcomingAssignments(course), 0)
+                  : 0}
               </div>
               <p className="text-xs text-muted-foreground">Due soon</p>
             </CardContent>
