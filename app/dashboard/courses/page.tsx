@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Course } from "@/lib/types";
-import { BookOpen, Users, Clock, Plus, AlertCircle } from "lucide-react";
+import { BookOpen, Users, Clock, Plus, AlertCircle, RefreshCw } from "lucide-react";
 
 export default function CoursesPage() {
   const { data: session, status } = useSession();
@@ -45,6 +45,7 @@ export default function CoursesPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        cache: 'no-store'
       });
 
       console.log("Response status:", res.status);
@@ -57,8 +58,21 @@ export default function CoursesPage() {
       const data = await res.json();
       console.log("Courses data received:", data);
 
-      // Handle both array and object responses
-      const coursesArray = Array.isArray(data) ? data : (data.courses || []);
+      // Handle different response formats
+      let coursesArray: Course[] = [];
+      
+      if (data.success && Array.isArray(data.courses)) {
+        coursesArray = data.courses;
+      } else if (Array.isArray(data)) {
+        coursesArray = data;
+      } else if (data.courses && Array.isArray(data.courses)) {
+        coursesArray = data.courses;
+      } else {
+        console.warn("Unexpected data format:", data);
+        coursesArray = [];
+      }
+
+      console.log("Setting courses:", coursesArray);
       setCourses(coursesArray);
       
     } catch (err: any) {
@@ -86,7 +100,10 @@ export default function CoursesPage() {
         <Header />
         <main className="p-6">
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="flex flex-col items-center space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="text-muted-foreground">Loading courses...</p>
+            </div>
           </div>
         </main>
       </div>
@@ -108,6 +125,7 @@ export default function CoursesPage() {
                   <p className="text-sm text-muted-foreground mt-1">{error}</p>
                 </div>
                 <Button onClick={loadCourses} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
                   Try Again
                 </Button>
               </CardContent>
@@ -137,7 +155,7 @@ export default function CoursesPage() {
 
         {/* Courses Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {courses.length > 0 ? (
+          {courses && courses.length > 0 ? (
             courses.map((course) => {
               const progress = calculateProgress(course);
               const upcomingAssignments = getUpcomingAssignments(course);
@@ -150,23 +168,23 @@ export default function CoursesPage() {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <CardTitle className="text-lg">{course.name}</CardTitle>
+                        <CardTitle className="text-lg">{course.name || 'Untitled Course'}</CardTitle>
                         <CardDescription className="flex items-center space-x-2">
                           <Badge
                             variant="outline"
                             style={{
-                              borderColor: course.color,
-                              color: course.color,
+                              borderColor: course.color || '#3B82F6',
+                              color: course.color || '#3B82F6',
                             }}
                           >
-                            {course.code}
+                            {course.code || 'N/A'}
                           </Badge>
-                          <span>{course.credits} credits</span>
+                          <span>{course.credits || 0} credits</span>
                         </CardDescription>
                       </div>
                       <div
                         className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: course.color }}
+                        style={{ backgroundColor: course.color || '#3B82F6' }}
                       />
                     </div>
                   </CardHeader>
@@ -234,7 +252,7 @@ export default function CoursesPage() {
         </div>
 
         {/* Stats Section */}
-        {courses.length > 0 && (
+        {courses && courses.length > 0 && (
           <div className="grid gap-6 md:grid-cols-3">
             <Card>
               <CardHeader className="pb-2">

@@ -51,16 +51,28 @@ export async function GET(request: NextRequest) {
 
     console.log("Courses API: Found courses", { count: courses.length });
 
-    // Return courses directly as an array, not wrapped in an object
-    return NextResponse.json(courses);
+    // Return courses with success wrapper for better error handling
+    return NextResponse.json({
+      success: true,
+      courses: courses,
+      count: courses.length
+    });
   } catch (error) {
     console.error("Courses API: Error fetching courses:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        success: false,
+        error: "Internal server error",
+        courses: []
+      },
       { status: 500 }
     );
   } finally {
-    await prisma.$disconnect();
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error("Error disconnecting from database:", disconnectError);
+    }
   }
 }
 
@@ -88,21 +100,34 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ course }, { status: 201 });
+    return NextResponse.json({ 
+      success: true,
+      course 
+    }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { 
+          success: false,
+          error: error.errors[0].message 
+        },
         { status: 400 }
       );
     }
 
     console.error("Error creating course:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        success: false,
+        error: "Internal server error" 
+      },
       { status: 500 }
     );
   } finally {
-    await prisma.$disconnect();
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error("Error disconnecting from database:", disconnectError);
+    }
   }
 }
