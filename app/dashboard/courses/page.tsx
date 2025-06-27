@@ -1,4 +1,75 @@
-console.log("Fetching courses...");
+import React, { useState, useEffect } from 'react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { 
+  AlertCircle, 
+  RefreshCw, 
+  Plus, 
+  Users, 
+  Clock, 
+  BookOpen 
+} from 'lucide-react';
+
+// Define the Course interface
+interface Assignment {
+  id: string;
+  title: string;
+  completed: boolean;
+  dueDate?: string;
+}
+
+interface Course {
+  id: string;
+  name: string;
+  code?: string;
+  credits?: number;
+  color?: string;
+  instructor?: string;
+  schedule?: string;
+  assignments?: Assignment[];
+}
+
+// Header component (you may need to import this or create it)
+const Header = () => (
+  <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="container flex h-14 items-center">
+      <div className="mr-4 hidden md:flex">
+        <a className="mr-6 flex items-center space-x-2" href="/">
+          <span className="hidden font-bold sm:inline-block">
+            Course Manager
+          </span>
+        </a>
+      </div>
+    </div>
+  </header>
+);
+
+const CoursesPage: React.FC = () => {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Mock status for demonstration - replace with your actual auth status
+  const [status] = useState<"loading" | "authenticated" | "unauthenticated">("authenticated");
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const loadCourses = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log("Fetching courses...");
       const res = await fetch("/api/courses", {
         method: "GET",
         headers: {
@@ -42,13 +113,13 @@ console.log("Fetching courses...");
     }
   };
 
-  const calculateProgress = (course: Course) => {
+  const calculateProgress = (course: Course): number => {
     if (!course.assignments || course.assignments.length === 0) return 0;
     const completed = course.assignments.filter((a) => a.completed).length;
     return (completed / course.assignments.length) * 100;
   };
 
-  const getUpcomingAssignments = (course: Course) => {
+  const getUpcomingAssignments = (course: Course): number => {
     return course.assignments?.filter((a) => !a.completed).length || 0;
   };
 
@@ -261,4 +332,6 @@ console.log("Fetching courses...");
       </main>
     </div>
   );
-}
+};
+
+export default CoursesPage;
