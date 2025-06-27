@@ -1,45 +1,4 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import Header from "@/components/dashboard/header";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Course } from "@/lib/types";
-import { BookOpen, Users, Clock, Plus, AlertCircle, RefreshCw } from "lucide-react";
-
-export default function CoursesPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (status === "loading") return;
-    if (status === "unauthenticated") {
-      router.push("/auth/signin");
-      return;
-    }
-
-    loadCourses();
-  }, [status, router]);
-
-  const loadCourses = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      
-      console.log("Fetching courses...");
+console.log("Fetching courses...");
       const res = await fetch("/api/courses", {
         method: "GET",
         headers: {
