@@ -5,10 +5,11 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/dashboard/header";
 import AddAssignmentModal from "@/components/modals/add-assignment-modal";
+import EditAssignmentModal from "@/components/modals/edit-assignment-modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Assignment } from "@/lib/types";
+import { Assignment, Course } from "@/lib/types";
 import { formatDistanceToNow, format } from "date-fns";
 import { Clock, CheckCircle, AlertCircle, Plus, Filter, Calendar, BookOpen } from "lucide-react";
 
@@ -16,6 +17,7 @@ export default function AssignmentsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
   const [loading, setLoading] = useState(true);
 
@@ -26,19 +28,30 @@ export default function AssignmentsPage() {
       return;
     }
     
-    loadAssignments();
+    loadData();
   }, [status, router]);
 
-  const loadAssignments = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/assignments");
-      if (response.ok) {
-        const data = await response.json();
-        setAssignments(data.assignments || []);
+      
+      // Load assignments and courses in parallel
+      const [assignmentsResponse, coursesResponse] = await Promise.all([
+        fetch("/api/assignments"),
+        fetch("/api/courses")
+      ]);
+
+      if (assignmentsResponse.ok) {
+        const assignmentsData = await assignmentsResponse.json();
+        setAssignments(assignmentsData.assignments || []);
+      }
+
+      if (coursesResponse.ok) {
+        const coursesData = await coursesResponse.json();
+        setCourses(Array.isArray(coursesData) ? coursesData : coursesData.courses || []);
       }
     } catch (error) {
-      console.error("Failed to load assignments:", error);
+      console.error("Failed to load data:", error);
     } finally {
       setLoading(false);
     }
@@ -90,7 +103,7 @@ export default function AssignmentsPage() {
       const assignment = assignments.find(a => a.id === assignmentId);
       if (!assignment) return;
 
-      const response = await fetch(`/api/assignments?id=${assignmentId}`, {
+      const response = await fetch(`/api/assignments/${assignmentId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -157,7 +170,7 @@ export default function AssignmentsPage() {
                 Completed
               </Button>
             </div>
-            <AddAssignmentModal onAssignmentAdded={loadAssignments} />
+            <AddAssignmentModal onAssignmentAdded={loadData} />
           </div>
         </div>
 
@@ -219,7 +232,7 @@ export default function AssignmentsPage() {
                   </p>
                   {filter === "all" && (
                     <AddAssignmentModal 
-                      onAssignmentAdded={loadAssignments}
+                      onAssignmentAdded={loadData}
                       trigger={
                         <Button>
                           <Plus className="h-4 w-4 mr-2" />
@@ -290,9 +303,11 @@ export default function AssignmentsPage() {
                       >
                         {assignment.completed ? "Completed" : "Mark Complete"}
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        Edit
-                      </Button>
+                      <EditAssignmentModal 
+                        assignment={assignment}
+                        courses={courses}
+                        onAssignmentUpdated={loadData}
+                      />
                     </div>
                   </div>
                 </CardContent>

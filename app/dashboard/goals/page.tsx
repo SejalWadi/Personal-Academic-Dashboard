@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/dashboard/header";
 import AddGoalModal from "@/components/modals/add-goal-modal";
+import EditGoalModal from "@/components/modals/edit-goal-modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,7 +84,7 @@ export default function GoalsPage() {
       const goal = goals.find(g => g.id === goalId);
       if (!goal) return;
 
-      const response = await fetch(`/api/goals?id=${goalId}`, {
+      const response = await fetch(`/api/goals/${goalId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -301,9 +302,10 @@ export default function GoalsPage() {
                       >
                         {goal.completed ? "Completed" : "Mark Complete"}
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        Edit
-                      </Button>
+                      <EditGoalModal 
+                        goal={goal}
+                        onGoalUpdated={loadGoals}
+                      />
                     </div>
                   </div>
                 </CardContent>
