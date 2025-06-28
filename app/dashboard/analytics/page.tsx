@@ -71,20 +71,6 @@ export default function AnalyticsPage() {
         target: 85,
       }));
 
-      // Course performance data
-      const coursePerformance = courses.map((course: any) => {
-        const courseGrades = grades.filter((g: any) => g.courseId === course.id);
-        const avgGrade = courseGrades.length > 0 
-          ? courseGrades.reduce((sum: number, g: any) => sum + g.percentage, 0) / courseGrades.length
-          : 0;
-        
-        return {
-          course: course.code || course.name?.substring(0, 8),
-          grade: Math.round(avgGrade),
-          assignments: course.assignments?.length || 0,
-        };
-      });
-
       // Time distribution (based on assignment types)
       const assignmentTypes = assignments.reduce((acc: any, assignment: any) => {
         acc[assignment.type] = (acc[assignment.type] || 0) + 1;
@@ -121,7 +107,6 @@ export default function AnalyticsPage() {
       setAnalyticsData({
         user: profileData.user,
         gradeData,
-        coursePerformance,
         timeDistribution,
         weeklyProgress,
         totalAssignments: assignments.length,
@@ -169,7 +154,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  const { user, gradeData, coursePerformance, timeDistribution, weeklyProgress } = analyticsData;
+  const { user, gradeData, timeDistribution, weeklyProgress } = analyticsData;
 
   return (
     <div className="min-h-screen bg-background">
@@ -284,21 +269,23 @@ export default function AnalyticsPage() {
             </Card>
           )}
 
-          {/* Course Performance */}
-          {coursePerformance.length > 0 && (
+          {/* Weekly Progress - Moved up */}
+          {weeklyProgress.some((w: any) => w.total > 0) && (
             <Card>
               <CardHeader>
-                <CardTitle>Course Performance</CardTitle>
-                <CardDescription>Average grades by course</CardDescription>
+                <CardTitle>Weekly Progress</CardTitle>
+                <CardDescription>Assignment completion by week</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={coursePerformance}>
+                  <BarChart data={weeklyProgress}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="course" />
-                    <YAxis domain={[0, 100]} />
+                    <XAxis dataKey="week" />
+                    <YAxis />
                     <Tooltip />
-                    <Bar dataKey="grade" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    <Legend />
+                    <Bar dataKey="completed" fill="#10B981" name="Completed" />
+                    <Bar dataKey="total" fill="#E5E7EB" name="Total" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -307,7 +294,7 @@ export default function AnalyticsPage() {
 
           {/* Assignment Distribution */}
           {timeDistribution.length > 0 && (
-            <Card>
+            <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>Assignment Distribution</CardTitle>
                 <CardDescription>Types of assignments you have</CardDescription>
@@ -331,29 +318,6 @@ export default function AnalyticsPage() {
                     </Pie>
                     <Tooltip />
                   </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Weekly Progress */}
-          {weeklyProgress.some((w: any) => w.total > 0) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Weekly Progress</CardTitle>
-                <CardDescription>Assignment completion by week</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={weeklyProgress}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="week" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="completed" fill="#10B981" name="Completed" />
-                    <Bar dataKey="total" fill="#E5E7EB" name="Total" />
-                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
