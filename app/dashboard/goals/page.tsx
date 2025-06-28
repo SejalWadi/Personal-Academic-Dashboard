@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/dashboard/header";
+import AddGoalModal from "@/components/modals/add-goal-modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ export default function GoalsPage() {
   const router = useRouter();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [filter, setFilter] = useState<"all" | "active" | "completed">("all");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -29,71 +31,18 @@ export default function GoalsPage() {
   }, [status, router]);
 
   const loadGoals = async () => {
-    // Mock data for demonstration
-    const mockGoals: Goal[] = [
-      {
-        id: "1",
-        title: "Maintain 3.8 GPA",
-        description: "Keep GPA above 3.8 for Dean's List eligibility and scholarship requirements",
-        category: "academic",
-        targetDate: new Date('2024-12-15'),
-        completed: false,
-        priority: "high",
-        progress: 75,
-      },
-      {
-        id: "2",
-        title: "Complete Internship Applications",
-        description: "Apply to at least 5 tech companies for summer internship positions",
-        category: "career",
-        targetDate: new Date('2024-02-01'),
-        completed: false,
-        priority: "high",
-        progress: 60,
-      },
-      {
-        id: "3",
-        title: "Learn React Native",
-        description: "Complete online course and build a mobile app project",
-        category: "personal",
-        targetDate: new Date('2024-03-30'),
-        completed: false,
-        priority: "medium",
-        progress: 30,
-      },
-      {
-        id: "4",
-        title: "Join Programming Club",
-        description: "Become an active member and participate in coding competitions",
-        category: "personal",
-        targetDate: new Date('2024-01-15'),
-        completed: true,
-        priority: "medium",
-        progress: 100,
-      },
-      {
-        id: "5",
-        title: "Complete Capstone Project",
-        description: "Finish senior capstone project with high quality deliverables",
-        category: "academic",
-        targetDate: new Date('2024-05-01'),
-        completed: false,
-        priority: "high",
-        progress: 25,
-      },
-      {
-        id: "6",
-        title: "Improve Public Speaking",
-        description: "Join Toastmasters and give at least 3 presentations this semester",
-        category: "personal",
-        targetDate: new Date('2024-04-15'),
-        completed: false,
-        priority: "low",
-        progress: 45,
-      },
-    ];
-
-    setGoals(mockGoals);
+    try {
+      setLoading(true);
+      const response = await fetch("/api/goals");
+      if (response.ok) {
+        const data = await response.json();
+        setGoals(data.goals || []);
+      }
+    } catch (error) {
+      console.error("Failed to load goals:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredGoals = goals.filter(goal => {
@@ -129,14 +78,34 @@ export default function GoalsPage() {
     }
   };
 
-  const toggleComplete = (goalId: string) => {
-    setGoals(prev => 
-      prev.map(goal => 
-        goal.id === goalId 
-          ? { ...goal, completed: !goal.completed, progress: goal.completed ? goal.progress : 100 }
-          : goal
-      )
-    );
+  const toggleComplete = async (goalId: string) => {
+    try {
+      const goal = goals.find(g => g.id === goalId);
+      if (!goal) return;
+
+      const response = await fetch(`/api/goals?id=${goalId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          completed: !goal.completed,
+          progress: goal.completed ? goal.progress : 100
+        }),
+      });
+
+      if (response.ok) {
+        setGoals(prev => 
+          prev.map(goal => 
+            goal.id === goalId 
+              ? { ...goal, completed: !goal.completed, progress: goal.completed ? goal.progress : 100 }
+              : goal
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to update goal:", error);
+    }
   };
 
   const getGoalStats = () => {
@@ -150,7 +119,7 @@ export default function GoalsPage() {
 
   const stats = getGoalStats();
 
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -193,10 +162,7 @@ export default function GoalsPage() {
                 Completed
               </Button>
             </div>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Goal
-            </Button>
+            <AddGoalModal onGoalAdded={loadGoals} />
           </div>
         </div>
 
@@ -244,12 +210,23 @@ export default function GoalsPage() {
                 <div className="text-center">
                   <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium">No goals found</h3>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground mb-4">
                     {filter === "all" 
                       ? "You don't have any goals yet."
                       : `No ${filter} goals found.`
                     }
                   </p>
+                  {filter === "all" && (
+                    <AddGoalModal 
+                      onGoalAdded={loadGoals}
+                      trigger={
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Your First Goal
+                        </Button>
+                      }
+                    />
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -1,76 +1,45 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { 
-  AlertCircle, 
-  RefreshCw, 
-  Plus, 
-  Users, 
-  Clock, 
-  BookOpen 
-} from 'lucide-react';
+"use client";
 
-// Define the Course interface
-interface Assignment {
-  id: string;
-  title: string;
-  completed: boolean;
-  dueDate?: string;
-}
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Header from "@/components/dashboard/header";
+import AddCourseModal from "@/components/modals/add-course-modal";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Course } from "@/lib/types";
+import { BookOpen, Users, Clock, Plus, AlertCircle, RefreshCw } from "lucide-react";
 
-interface Course {
-  id: string;
-  name: string;
-  code?: string;
-  credits?: number;
-  color?: string;
-  instructor?: string;
-  schedule?: string;
-  assignments?: Assignment[];
-}
-
-// Header component (you may need to import this or create it)
-const Header = () => (
-  <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-    <div className="container flex h-14 items-center">
-      <div className="mr-4 hidden md:flex">
-        <a className="mr-6 flex items-center space-x-2" href="/">
-          <span className="hidden font-bold sm:inline-block">
-            Course Manager
-          </span>
-        </a>
-      </div>
-    </div>
-  </header>
-);
-
-const CoursesPage: React.FC = () => {
+export default function CoursesPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Mock status for demonstration - replace with your actual auth status
-  const [status] = useState<"loading" | "authenticated" | "unauthenticated">("authenticated");
 
   useEffect(() => {
+    if (status === "loading") return;
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+      return;
+    }
+    
     loadCourses();
-  }, []);
+  }, [status, router]);
 
   const loadCourses = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log("Fetching courses...");
       const res = await fetch("/api/courses", {
         method: "GET",
         headers: {
@@ -79,16 +48,13 @@ const CoursesPage: React.FC = () => {
         cache: 'no-store'
       });
 
-      console.log("Response status:", res.status);
-
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
       }
 
       const data = await res.json();
-      console.log("Courses data received:", data);
-
+      
       // Handle different response formats
       let coursesArray: Course[] = [];
       
@@ -99,11 +65,9 @@ const CoursesPage: React.FC = () => {
       } else if (data.courses && Array.isArray(data.courses)) {
         coursesArray = data.courses;
       } else {
-        console.warn("Unexpected data format:", data);
         coursesArray = [];
       }
 
-      console.log("Setting courses:", coursesArray);
       setCourses(coursesArray);
       
     } catch (err: any) {
@@ -178,10 +142,7 @@ const CoursesPage: React.FC = () => {
               Manage your enrolled courses and track progress
             </p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Course
-          </Button>
+          <AddCourseModal onCourseAdded={loadCourses} />
         </div>
 
         {/* Courses Grid */}
@@ -272,10 +233,15 @@ const CoursesPage: React.FC = () => {
                   <p className="text-muted-foreground text-center mb-4">
                     Get started by adding your first course
                   </p>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Course
-                  </Button>
+                  <AddCourseModal 
+                    onCourseAdded={loadCourses}
+                    trigger={
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Your First Course
+                      </Button>
+                    }
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -333,6 +299,4 @@ const CoursesPage: React.FC = () => {
       </main>
     </div>
   );
-};
-
-export default CoursesPage;
+}

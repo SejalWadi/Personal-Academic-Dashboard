@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/dashboard/header";
+import AddAssignmentModal from "@/components/modals/add-assignment-modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ export default function AssignmentsPage() {
   const router = useRouter();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -28,77 +30,18 @@ export default function AssignmentsPage() {
   }, [status, router]);
 
   const loadAssignments = async () => {
-    // Mock data for demonstration
-    const mockAssignments: Assignment[] = [
-      {
-        id: "1",
-        title: "React Components Lab",
-        description: "Build a set of reusable React components with proper TypeScript types and documentation",
-        type: "assignment",
-        dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-        points: 100,
-        completed: false,
-        priority: "high",
-        course: { id: "1", name: "Web Development", code: "CS 350", credits: 3, color: "#3B82F6", semester: "Fall", year: "2024" },
-      },
-      {
-        id: "2",
-        title: "Database Design Quiz",
-        description: "Quiz covering normalization, ER diagrams, and relational database design principles",
-        type: "quiz",
-        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-        points: 50,
-        completed: false,
-        priority: "medium",
-        course: { id: "2", name: "Database Systems", code: "CS 340", credits: 3, color: "#10B981", semester: "Fall", year: "2024" },
-      },
-      {
-        id: "3",
-        title: "Algorithm Analysis Report",
-        description: "Analyze time and space complexity of various sorting algorithms with empirical testing",
-        type: "assignment",
-        dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        points: 100,
-        completed: true,
-        priority: "high",
-        course: { id: "3", name: "Data Structures", code: "CS 260", credits: 4, color: "#F59E0B", semester: "Fall", year: "2024" },
-      },
-      {
-        id: "4",
-        title: "Team Project Proposal",
-        description: "Submit a comprehensive project proposal for the semester-long software engineering project",
-        type: "project",
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        points: 200,
-        completed: false,
-        priority: "high",
-        course: { id: "4", name: "Software Engineering", code: "CS 380", credits: 3, color: "#8B5CF6", semester: "Fall", year: "2024" },
-      },
-      {
-        id: "5",
-        title: "Network Protocol Implementation",
-        description: "Implement a simple network protocol using socket programming in Python",
-        type: "assignment",
-        dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-        points: 120,
-        completed: false,
-        priority: "medium",
-        course: { id: "5", name: "Computer Networks", code: "CS 420", credits: 3, color: "#EF4444", semester: "Fall", year: "2024" },
-      },
-      {
-        id: "6",
-        title: "Binary Tree Visualization",
-        description: "Create an interactive visualization of binary tree operations using JavaScript",
-        type: "project",
-        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        points: 150,
-        completed: false,
-        priority: "medium",
-        course: { id: "3", name: "Data Structures", code: "CS 260", credits: 4, color: "#F59E0B", semester: "Fall", year: "2024" },
-      },
-    ];
-
-    setAssignments(mockAssignments);
+    try {
+      setLoading(true);
+      const response = await fetch("/api/assignments");
+      if (response.ok) {
+        const data = await response.json();
+        setAssignments(data.assignments || []);
+      }
+    } catch (error) {
+      console.error("Failed to load assignments:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredAssignments = assignments.filter(assignment => {
@@ -142,17 +85,36 @@ export default function AssignmentsPage() {
     );
   };
 
-  const toggleComplete = (assignmentId: string) => {
-    setAssignments(prev => 
-      prev.map(assignment => 
-        assignment.id === assignmentId 
-          ? { ...assignment, completed: !assignment.completed }
-          : assignment
-      )
-    );
+  const toggleComplete = async (assignmentId: string) => {
+    try {
+      const assignment = assignments.find(a => a.id === assignmentId);
+      if (!assignment) return;
+
+      const response = await fetch(`/api/assignments?id=${assignmentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          completed: !assignment.completed
+        }),
+      });
+
+      if (response.ok) {
+        setAssignments(prev => 
+          prev.map(assignment => 
+            assignment.id === assignmentId 
+              ? { ...assignment, completed: !assignment.completed }
+              : assignment
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to update assignment:", error);
+    }
   };
 
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -195,10 +157,7 @@ export default function AssignmentsPage() {
                 Completed
               </Button>
             </div>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Assignment
-            </Button>
+            <AddAssignmentModal onAssignmentAdded={loadAssignments} />
           </div>
         </div>
 
@@ -252,12 +211,23 @@ export default function AssignmentsPage() {
                 <div className="text-center">
                   <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium">No assignments found</h3>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground mb-4">
                     {filter === "all" 
                       ? "You don't have any assignments yet."
                       : `No ${filter} assignments found.`
                     }
                   </p>
+                  {filter === "all" && (
+                    <AddAssignmentModal 
+                      onAssignmentAdded={loadAssignments}
+                      trigger={
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Your First Assignment
+                        </Button>
+                      }
+                    />
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -284,6 +254,12 @@ export default function AssignmentsPage() {
                           <Badge variant={getPriorityColor(assignment.priority)}>
                             {assignment.priority} priority
                           </Badge>
+                          {assignment.completed && (
+                            <Badge variant="outline" className="text-green-600 border-green-600">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Completed
+                            </Badge>
+                          )}
                         </div>
                         
                         {assignment.description && (

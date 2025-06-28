@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/dashboard/header";
+import AddEventModal from "@/components/modals/add-event-modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -29,61 +31,18 @@ export default function CalendarPage() {
   }, [status, router]);
 
   const loadAssignments = async () => {
-    // Mock data for demonstration
-    const mockAssignments: Assignment[] = [
-      {
-        id: "1",
-        title: "React Components Lab",
-        type: "assignment",
-        dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-        points: 100,
-        completed: false,
-        priority: "high",
-        course: { id: "1", name: "Web Development", code: "CS 350", credits: 3, color: "#3B82F6", semester: "Fall", year: "2024" },
-      },
-      {
-        id: "2",
-        title: "Database Design Quiz",
-        type: "quiz",
-        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-        points: 50,
-        completed: false,
-        priority: "medium",
-        course: { id: "2", name: "Database Systems", code: "CS 340", credits: 3, color: "#10B981", semester: "Fall", year: "2024" },
-      },
-      {
-        id: "3",
-        title: "Algorithm Analysis",
-        type: "assignment",
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        points: 100,
-        completed: false,
-        priority: "high",
-        course: { id: "3", name: "Data Structures", code: "CS 260", credits: 4, color: "#F59E0B", semester: "Fall", year: "2024" },
-      },
-      {
-        id: "4",
-        title: "Team Project Proposal",
-        type: "project",
-        dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-        points: 200,
-        completed: false,
-        priority: "high",
-        course: { id: "4", name: "Software Engineering", code: "CS 380", credits: 3, color: "#8B5CF6", semester: "Fall", year: "2024" },
-      },
-      {
-        id: "5",
-        title: "Midterm Exam",
-        type: "exam",
-        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        points: 150,
-        completed: false,
-        priority: "high",
-        course: { id: "5", name: "Computer Networks", code: "CS 420", credits: 3, color: "#EF4444", semester: "Fall", year: "2024" },
-      },
-    ];
-
-    setAssignments(mockAssignments);
+    try {
+      setLoading(true);
+      const response = await fetch("/api/assignments");
+      if (response.ok) {
+        const data = await response.json();
+        setAssignments(data.assignments || []);
+      }
+    } catch (error) {
+      console.error("Failed to load assignments:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const monthStart = startOfMonth(currentDate);
@@ -122,7 +81,7 @@ export default function CalendarPage() {
     }
   };
 
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -141,10 +100,13 @@ export default function CalendarPage() {
               View and manage your assignment deadlines and important dates
             </p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Event
-          </Button>
+          <AddEventModal 
+            selectedDate={selectedDate || undefined}
+            onEventAdded={() => {
+              // Refresh assignments when event is added
+              loadAssignments();
+            }}
+          />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -252,9 +214,21 @@ export default function CalendarPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {getSelectedDateAssignments().length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No assignments due on this date
-                    </p>
+                    <div className="text-center py-4">
+                      <p className="text-muted-foreground text-sm mb-3">
+                        No assignments due on this date
+                      </p>
+                      <AddEventModal 
+                        selectedDate={selectedDate}
+                        onEventAdded={loadAssignments}
+                        trigger={
+                          <Button size="sm">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Event
+                          </Button>
+                        }
+                      />
+                    </div>
                   ) : (
                     getSelectedDateAssignments().map(assignment => (
                       <div key={assignment.id} className="space-y-2">
@@ -300,6 +274,11 @@ export default function CalendarPage() {
                       />
                     </div>
                   ))}
+                {assignments.filter(a => !a.completed && new Date(a.dueDate) >= new Date()).length === 0 && (
+                  <p className="text-muted-foreground text-sm text-center py-4">
+                    No upcoming deadlines
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>

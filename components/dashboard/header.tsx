@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -15,6 +16,19 @@ import { Bell, LogOut, Settings, User } from "lucide-react";
 
 export default function Header() {
   const { data: session } = useSession();
+  const router = useRouter();
+
+  const handleNotificationClick = () => {
+    router.push("/dashboard/settings?tab=notifications");
+  };
+
+  const handleProfileClick = () => {
+    router.push("/dashboard/settings?tab=profile");
+  };
+
+  const handleSettingsClick = () => {
+    router.push("/dashboard/settings");
+  };
 
   return (
     <header className="flex items-center justify-between p-4 border-b bg-background">
@@ -26,7 +40,11 @@ export default function Header() {
       </div>
 
       <div className="flex items-center space-x-4">
-        <Button variant="outline" size="sm">
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleNotificationClick}
+        >
           <Bell className="h-4 w-4" />
         </Button>
 
@@ -53,11 +71,11 @@ export default function Header() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleProfileClick}>
               <User className="mr-2 h-4 w-4" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSettingsClick}>
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </DropdownMenuItem>

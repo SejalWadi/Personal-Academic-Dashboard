@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/dashboard/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import {
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("profile");
 
   useEffect(() => {
@@ -39,7 +40,13 @@ export default function SettingsPage() {
       router.push("/auth/signin");
       return;
     }
-  }, [status, router]);
+
+    // Check for tab parameter in URL
+    const tab = searchParams.get('tab');
+    if (tab && ['profile', 'notifications', 'preferences', 'privacy', 'data'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [status, router, searchParams]);
 
   // Mock user data
   const [userProfile, setUserProfile] = useState({
