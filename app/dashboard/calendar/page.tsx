@@ -12,11 +12,22 @@ import { Assignment } from "@/lib/types";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isSameMonth } from "date-fns";
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon } from "lucide-react";
 
+interface Event {
+  id: string;
+  title: string;
+  description?: string;
+  type: string;
+  date: Date;
+  time?: string;
+  duration: number;
+}
+
 export default function CalendarPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,19 +38,33 @@ export default function CalendarPage() {
       return;
     }
     
-    loadAssignments();
-  }, [status, router]);
+    loadData();
+  }, [status, router, currentDate]);
 
-  const loadAssignments = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/assignments");
-      if (response.ok) {
-        const data = await response.json();
-        setAssignments(data.assignments || []);
+      
+      // Load assignments
+      const assignmentsResponse = await fetch("/api/assignments");
+      if (assignmentsResponse.ok) {
+        const assignmentsData = await assignmentsResponse.json();
+        setAssignments(assignmentsData.assignments || []);
+      }
+
+      // Load events for current month
+      const month = currentDate.getMonth() + 1;
+      const year = currentDate.getFullYear();
+      const eventsResponse = await fetch(`/api/events?month=${month}&year=${year}`);
+      if (eventsResponse.ok) {
+        const eventsData = await eventsResponse.json();
+        setEvents((eventsData.events || []).map((event: any) => ({
+          ...event,
+          date: new Date(event.date)
+        })));
       }
     } catch (error) {
-      console.error("Failed to load assignments:", error);
+      console.error("Failed to load calendar data:", error);
     } finally {
       setLoading(false);
     }
@@ -49,10 +74,15 @@ export default function CalendarPage() {
   const monthEnd = endOfMonth(currentDate);
   const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  const getAssignmentsForDate = (date: Date) => {
-    return assignments.filter(assignment => 
+  const getItemsForDate = (date: Date) => {
+    const dayAssignments = assignments.filter(assignment => 
       isSameDay(new Date(assignment.dueDate), date)
     );
+    const dayEvents = events.filter(event => 
+      isSameDay(event.date, date)
+    );
+    
+    return [...dayAssignments, ...dayEvents];
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -67,9 +97,9 @@ export default function CalendarPage() {
     });
   };
 
-  const getSelectedDateAssignments = () => {
+  const getSelectedDateItems = () => {
     if (!selectedDate) return [];
-    return getAssignmentsForDate(selectedDate);
+    return getItemsForDate(selectedDate);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -78,6 +108,17 @@ export default function CalendarPage() {
       case "medium": return "default";
       case "low": return "secondary";
       default: return "default";
+    }
+  };
+
+  const getEventTypeColor = (type: string) => {
+    switch (type) {
+      case "event": return "#3B82F6";
+      case "study": return "#10B981";
+      case "meeting": return "#F59E0B";
+      case "exam": return "#EF4444";
+      case "deadline": return "#8B5CF6";
+      default: return "#6B7280";
     }
   };
 
@@ -102,10 +143,7 @@ export default function CalendarPage() {
           </div>
           <AddEventModal 
             selectedDate={selectedDate || undefined}
-            onEventAdded={() => {
-              // Refresh assignments when event is added
-              loadAssignments();
-            }}
+            onEventAdded={loadData}
           />
         </div>
 
@@ -154,7 +192,7 @@ export default function CalendarPage() {
                 
                 <div className="grid grid-cols-7 gap-1">
                   {calendarDays.map(day => {
-                    const dayAssignments = getAssignmentsForDate(day);
+                    const dayItems = getItemsForDate(day);
                     const isSelected = selectedDate && isSameDay(day, selectedDate);
                     const isCurrentMonth = isSameMonth(day, currentDate);
                     
@@ -173,21 +211,21 @@ export default function CalendarPage() {
                           {format(day, 'd')}
                         </div>
                         <div className="space-y-1">
-                          {dayAssignments.slice(0, 2).map(assignment => (
+                          {dayItems.slice(0, 2).map((item: any) => (
                             <div
-                              key={assignment.id}
+                              key={item.id}
                               className="text-xs p-1 rounded truncate"
                               style={{ 
-                                backgroundColor: assignment.course?.color + '20',
-                                color: assignment.course?.color 
+                                backgroundColor: item.type ? getEventTypeColor(item.type) + '20' : (item.course?.color + '20'),
+                                color: item.type ? getEventTypeColor(item.type) : item.course?.color 
                               }}
                             >
-                              {assignment.title}
+                              {item.title}
                             </div>
                           ))}
-                          {dayAssignments.length > 2 && (
+                          {dayItems.length > 2 && (
                             <div className="text-xs text-muted-foreground">
-                              +{dayAssignments.length - 2} more
+                              +{dayItems.length - 2} more
                             </div>
                           )}
                         </div>
@@ -209,18 +247,18 @@ export default function CalendarPage() {
                     {format(selectedDate, 'EEEE, MMMM d')}
                   </CardTitle>
                   <CardDescription>
-                    {getSelectedDateAssignments().length} assignment(s) due
+                    {getSelectedDateItems().length} item(s) on this date
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {getSelectedDateAssignments().length === 0 ? (
+                  {getSelectedDateItems().length === 0 ? (
                     <div className="text-center py-4">
                       <p className="text-muted-foreground text-sm mb-3">
-                        No assignments due on this date
+                        No items on this date
                       </p>
                       <AddEventModal 
                         selectedDate={selectedDate}
-                        onEventAdded={loadAssignments}
+                        onEventAdded={loadData}
                         trigger={
                           <Button size="sm">
                             <Plus className="h-4 w-4 mr-2" />
@@ -230,18 +268,21 @@ export default function CalendarPage() {
                       />
                     </div>
                   ) : (
-                    getSelectedDateAssignments().map(assignment => (
-                      <div key={assignment.id} className="space-y-2">
+                    getSelectedDateItems().map((item: any) => (
+                      <div key={item.id} className="space-y-2">
                         <div className="flex items-start justify-between">
                           <div>
-                            <h4 className="font-medium text-sm">{assignment.title}</h4>
+                            <h4 className="font-medium text-sm">{item.title}</h4>
                             <p className="text-xs text-muted-foreground">
-                              {assignment.course?.name} • {assignment.points} points
+                              {item.course ? `${item.course.name} • ${item.points} points` : 
+                               item.type ? `${item.type} • ${item.duration}min` : ''}
                             </p>
                           </div>
-                          <Badge variant={getPriorityColor(assignment.priority)} className="text-xs">
-                            {assignment.priority}
-                          </Badge>
+                          {item.priority && (
+                            <Badge variant={getPriorityColor(item.priority)} className="text-xs">
+                              {item.priority}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     ))
@@ -250,33 +291,43 @@ export default function CalendarPage() {
               </Card>
             )}
 
-            {/* Upcoming Deadlines */}
+            {/* Upcoming Items */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Upcoming Deadlines</CardTitle>
+                <CardTitle className="text-lg">Upcoming Items</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {assignments
-                  .filter(a => !a.completed && new Date(a.dueDate) >= new Date())
-                  .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+                {[...assignments, ...events]
+                  .filter(item => {
+                    const itemDate = new Date(item.dueDate || item.date);
+                    return itemDate >= new Date();
+                  })
+                  .sort((a, b) => {
+                    const dateA = new Date(a.dueDate || a.date);
+                    const dateB = new Date(b.dueDate || b.date);
+                    return dateA.getTime() - dateB.getTime();
+                  })
                   .slice(0, 5)
-                  .map(assignment => (
-                    <div key={assignment.id} className="flex items-center justify-between">
+                  .map((item: any) => (
+                    <div key={item.id} className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-sm">{assignment.title}</h4>
+                        <h4 className="font-medium text-sm">{item.title}</h4>
                         <p className="text-xs text-muted-foreground">
-                          {assignment.course?.code} • {format(new Date(assignment.dueDate), 'MMM d')}
+                          {item.course?.code || item.type} • {format(new Date(item.dueDate || item.date), 'MMM d')}
                         </p>
                       </div>
                       <div
                         className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: assignment.course?.color }}
+                        style={{ backgroundColor: item.course?.color || getEventTypeColor(item.type) }}
                       />
                     </div>
                   ))}
-                {assignments.filter(a => !a.completed && new Date(a.dueDate) >= new Date()).length === 0 && (
+                {[...assignments, ...events].filter(item => {
+                  const itemDate = new Date(item.dueDate || item.date);
+                  return itemDate >= new Date();
+                }).length === 0 && (
                   <p className="text-muted-foreground text-sm text-center py-4">
-                    No upcoming deadlines
+                    No upcoming items
                   </p>
                 )}
               </CardContent>

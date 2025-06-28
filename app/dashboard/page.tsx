@@ -22,6 +22,8 @@ export default function DashboardPage() {
   });
   const [recentAssignments, setRecentAssignments] = useState<Assignment[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [gradeData, setGradeData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -30,104 +32,97 @@ export default function DashboardPage() {
       return;
     }
     
-    // Load dashboard data
     loadDashboardData();
   }, [status, router]);
 
   const loadDashboardData = async () => {
-    // Mock data for demonstration
-    const mockStats: DashboardStats = {
-      totalCourses: 5,
-      totalAssignments: 12,
-      completedAssignments: 8,
-      averageGrade: 87.5,
-      upcomingDeadlines: 3,
-    };
+    try {
+      setLoading(true);
 
-    const mockAssignments: Assignment[] = [
-      {
-        id: "1",
-        title: "React Components Lab",
-        type: "assignment",
-        dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-        points: 100,
-        completed: false,
-        priority: "high",
-        course: { name: "Web Development", code: "CS 350" } as Course,
-      },
-      {
-        id: "2",
-        title: "Database Design Quiz",
-        type: "quiz",
-        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-        points: 50,
-        completed: false,
-        priority: "medium",
-        course: { name: "Database Systems", code: "CS 340" } as Course,
-      },
-      {
-        id: "3",
-        title: "Algorithm Analysis",
-        type: "assignment",
-        dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        points: 100,
-        completed: true,
-        priority: "high",
-        course: { name: "Data Structures", code: "CS 260" } as Course,
-      },
-    ];
+      // Load dashboard stats
+      const statsResponse = await fetch("/api/dashboard/stats");
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats(statsData.stats);
+      }
 
-    const mockCourses: Course[] = [
-      {
-        id: "1",
-        name: "Web Development",
-        code: "CS 350",
-        credits: 3,
-        color: "#3B82F6",
-        semester: "Fall",
-        year: "2024",
-        instructor: "Dr. Smith",
-        assignments: mockAssignments.slice(0, 2),
-      },
-      {
-        id: "2",
-        name: "Database Systems",
-        code: "CS 340",
-        credits: 3,
-        color: "#10B981",
-        semester: "Fall",
-        year: "2024",
-        instructor: "Prof. Johnson",
-        assignments: [mockAssignments[1]],
-      },
-      {
-        id: "3",
-        name: "Data Structures",
-        code: "CS 260",
-        credits: 4,
-        color: "#F59E0B",
-        semester: "Fall",
-        year: "2024",
-        instructor: "Dr. Williams",
-        assignments: [mockAssignments[2]],
-      },
-    ];
+      // Load recent assignments
+      const assignmentsResponse = await fetch("/api/assignments");
+      if (assignmentsResponse.ok) {
+        const assignmentsData = await assignmentsResponse.json();
+        const assignments = assignmentsData.assignments || [];
+        setRecentAssignments(assignments.slice(0, 5)); // Show only 5 recent assignments
+      }
 
-    setStats(mockStats);
-    setRecentAssignments(mockAssignments);
-    setCourses(mockCourses);
+      // Load courses
+      const coursesResponse = await fetch("/api/courses");
+      if (coursesResponse.ok) {
+        const coursesData = await coursesResponse.json();
+        const coursesArray = Array.isArray(coursesData) ? coursesData : coursesData.courses || [];
+        setCourses(coursesArray);
+      }
+
+      // Load grades for chart
+      const gradesResponse = await fetch("/api/grades");
+      if (gradesResponse.ok) {
+        const gradesData = await gradesResponse.json();
+        const grades = gradesData.grades || [];
+        
+        // Transform grades data for chart
+        const chartData = grades.map((grade: any, index: number) => ({
+          name: grade.assignment?.title || `Assignment ${index + 1}`,
+          grade: grade.percentage,
+          average: 82, // You can calculate class average if you have that data
+        }));
+        
+        setGradeData(chartData);
+      }
+
+    } catch (error) {
+      console.error("Failed to load dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const gradeData = [
-    { name: "Quiz 1", grade: 85, average: 78 },
-    { name: "Assignment 1", grade: 92, average: 85 },
-    { name: "Midterm", grade: 88, average: 82 },
-    { name: "Project", grade: 95, average: 87 },
-    { name: "Quiz 2", grade: 82, average: 79 },
-    { name: "Assignment 2", grade: 90, average: 84 },
-  ];
+  const handleAssignmentToggle = async (assignmentId: string) => {
+    try {
+      const assignment = recentAssignments.find(a => a.id === assignmentId);
+      if (!assignment) return;
 
-  if (status === "loading") {
+      const response = await fetch(`/api/assignments?id=${assignmentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          completed: !assignment.completed
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setRecentAssignments(prev => 
+          prev.map(a => 
+            a.id === assignmentId 
+              ? { ...a, completed: !a.completed }
+              : a
+          )
+        );
+
+        // Reload dashboard stats to reflect changes
+        const statsResponse = await fetch("/api/dashboard/stats");
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setStats(statsData.stats);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to update assignment:", error);
+    }
+  };
+
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -142,11 +137,14 @@ export default function DashboardPage() {
         <StatsCards stats={stats} />
         
         <div className="grid gap-6 lg:grid-cols-2">
-          <RecentAssignments assignments={recentAssignments} />
+          <RecentAssignments 
+            assignments={recentAssignments} 
+            onToggleComplete={handleAssignmentToggle}
+          />
           <CourseProgress courses={courses} />
         </div>
         
-        <GradeChart data={gradeData} />
+        {gradeData.length > 0 && <GradeChart data={gradeData} />}
       </main>
     </div>
   );

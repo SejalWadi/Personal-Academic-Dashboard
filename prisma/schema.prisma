@@ -30,6 +30,7 @@ model User {
   assignments   Assignment[]
   grades        Grade[]
   goals         Goal[]
+  events        Event[]
   
   @@map("users")
 }
@@ -116,4 +117,22 @@ model Goal {
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("goals")
+}
+
+model Event {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  type          String    // "event", "study", "meeting", "exam", "deadline"
+  date          DateTime
+  time          String?
+  duration      Int       @default(60) // in minutes
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("events")
 }

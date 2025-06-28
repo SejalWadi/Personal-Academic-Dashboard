@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,7 @@ export default function AddEventModal({ onEventAdded, trigger, selectedDate }: A
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     title: "",
@@ -44,8 +46,18 @@ export default function AddEventModal({ onEventAdded, trigger, selectedDate }: A
     setError("");
 
     try {
-      // For now, we'll just simulate success since we don't have an events API yet
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch("/api/events", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create event");
+      }
 
       // Reset form
       setFormData({
@@ -59,6 +71,7 @@ export default function AddEventModal({ onEventAdded, trigger, selectedDate }: A
 
       setOpen(false);
       onEventAdded?.();
+      router.refresh();
     } catch (err: any) {
       setError(err.message || "Failed to create event");
     } finally {

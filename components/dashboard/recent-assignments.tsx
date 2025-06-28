@@ -9,9 +9,10 @@ import { Clock, CheckCircle, AlertCircle } from "lucide-react";
 
 interface RecentAssignmentsProps {
   assignments: Assignment[];
+  onToggleComplete?: (assignmentId: string) => void;
 }
 
-export default function RecentAssignments({ assignments }: RecentAssignmentsProps) {
+export default function RecentAssignments({ assignments, onToggleComplete }: RecentAssignmentsProps) {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
@@ -70,9 +71,13 @@ export default function RecentAssignments({ assignments }: RecentAssignmentsProp
                 <Badge variant={getPriorityColor(assignment.priority)}>
                   {assignment.priority}
                 </Badge>
-                {!assignment.completed && (
-                  <Button size="sm" variant="outline">
-                    Mark Complete
+                {onToggleComplete && (
+                  <Button 
+                    size="sm" 
+                    variant={assignment.completed ? "default" : "outline"}
+                    onClick={() => onToggleComplete(assignment.id)}
+                  >
+                    {assignment.completed ? "Completed" : "Mark Complete"}
                   </Button>
                 )}
               </div>
