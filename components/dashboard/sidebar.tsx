@@ -15,13 +15,15 @@ import {
   Menu,
   Home,
   GraduationCap,
-  ClipboardList
+  ClipboardList,
+  Award
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Courses", href: "/dashboard/courses", icon: BookOpen },
   { name: "Assignments", href: "/dashboard/assignments", icon: ClipboardList },
+  { name: "Grades", href: "/dashboard/grades", icon: Award },
   { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "Goals", href: "/dashboard/goals", icon: Target },
