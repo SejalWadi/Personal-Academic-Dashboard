@@ -100,12 +100,6 @@ export default function SignInForm() {
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isLoading ? "Signing In..." : "Sign In"}
           </Button>
-          
-          <div className="mt-4 p-3 bg-muted rounded-md">
-            <p className="text-sm text-muted-foreground text-center mb-2">Demo Account:</p>
-            <p className="text-xs text-center">Email: demo@example.com</p>
-            <p className="text-xs text-center">Password: demo123</p>
-          </div>
         </form>
       </CardContent>
     </Card>
