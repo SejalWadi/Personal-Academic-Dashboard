@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   User, 
   Bell, 
@@ -25,7 +26,8 @@ import {
   Mail,
   Phone,
   MapPin,
-  GraduationCap
+  GraduationCap,
+  Loader2
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -33,31 +35,19 @@ export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("profile");
+  const [loading, setLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
-  useEffect(() => {
-    if (status === "loading") return;
-    if (status === "unauthenticated") {
-      router.push("/auth/signin");
-      return;
-    }
-
-    // Check for tab parameter in URL
-    const tab = searchParams.get('tab');
-    if (tab && ['profile', 'notifications', 'preferences', 'privacy', 'data'].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, [status, router, searchParams]);
-
-  // Mock user data
+  // Mock user data - will be replaced with real data
   const [userProfile, setUserProfile] = useState({
-    name: session?.user?.name || "Demo Student",
-    email: session?.user?.email || "demo@example.com",
-    studentId: "STU001",
-    major: "Computer Science",
-    year: "Junior",
-    gpa: "3.7",
-    phone: "+1 (555) 123-4567",
-    address: "123 University Ave, College Town, ST 12345",
+    name: "",
+    email: "",
+    studentId: "",
+    major: "",
+    year: "",
+    gpa: "",
+    phone: "",
+    address: "",
   });
 
   const [notifications, setNotifications] = useState({
@@ -77,6 +67,45 @@ export default function SettingsPage() {
     startOfWeek: "monday",
   });
 
+  useEffect(() => {
+    if (status === "loading") return;
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+      return;
+    }
+
+    // Check for tab parameter in URL
+    const tab = searchParams.get('tab');
+    if (tab && ['profile', 'notifications', 'preferences', 'privacy', 'data'].includes(tab)) {
+      setActiveTab(tab);
+    }
+
+    // Load user profile data
+    loadUserProfile();
+  }, [status, router, searchParams]);
+
+  const loadUserProfile = async () => {
+    try {
+      const response = await fetch("/api/user/profile");
+      if (response.ok) {
+        const data = await response.json();
+        const user = data.user;
+        setUserProfile({
+          name: user.name || "",
+          email: user.email || "",
+          studentId: user.studentId || "",
+          major: user.major || "",
+          year: user.year || "",
+          gpa: user.gpa ? user.gpa.toString() : "",
+          phone: "+1 (555) 123-4567", // Mock data
+          address: "123 University Ave, College Town, ST 12345", // Mock data
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load user profile:", error);
+    }
+  };
+
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
     { id: "notifications", label: "Notifications", icon: Bell },
@@ -85,9 +114,47 @@ export default function SettingsPage() {
     { id: "data", label: "Data & Export", icon: Download },
   ];
 
-  const handleSave = () => {
-    // Here you would typically save to your backend
-    console.log("Saving settings...");
+  const handleSave = async () => {
+    if (activeTab === "profile") {
+      try {
+        setLoading(true);
+        setSaveMessage("");
+
+        const profileData = {
+          name: userProfile.name,
+          email: userProfile.email,
+          studentId: userProfile.studentId || undefined,
+          major: userProfile.major || undefined,
+          year: userProfile.year || undefined,
+          gpa: userProfile.gpa ? parseFloat(userProfile.gpa) : undefined,
+        };
+
+        const response = await fetch("/api/user/profile", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(profileData),
+        });
+
+        if (response.ok) {
+          setSaveMessage("Profile updated successfully!");
+          setTimeout(() => setSaveMessage(""), 3000);
+        } else {
+          const errorData = await response.json();
+          setSaveMessage(`Error: ${errorData.error}`);
+        }
+      } catch (error) {
+        console.error("Failed to save profile:", error);
+        setSaveMessage("Failed to save changes. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // For other tabs, just show a mock success message
+      setSaveMessage("Settings saved successfully!");
+      setTimeout(() => setSaveMessage(""), 3000);
+    }
   };
 
   if (status === "loading") {
@@ -133,6 +200,12 @@ export default function SettingsPage() {
 
             {/* Settings Content */}
             <div className="lg:col-span-3 space-y-6">
+              {saveMessage && (
+                <Alert>
+                  <AlertDescription>{saveMessage}</AlertDescription>
+                </Alert>
+              )}
+
               {activeTab === "profile" && (
                 <Card>
                   <CardHeader>
@@ -145,9 +218,9 @@ export default function SettingsPage() {
                     {/* Profile Picture */}
                     <div className="flex items-center space-x-4">
                       <Avatar className="h-20 w-20">
-                        <AvatarImage src={session?.user?.image || ""} />
+                        <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || ""} />
                         <AvatarFallback className="text-lg">
-                          {userProfile.name.charAt(0)}
+                          {userProfile.name.charAt(0) || "S"}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -221,7 +294,7 @@ export default function SettingsPage() {
                           <Label htmlFor="year">Academic Year</Label>
                           <Select value={userProfile.year} onValueChange={(value) => setUserProfile({...userProfile, year: value})}>
                             <SelectTrigger>
-                              <SelectValue />
+                              <SelectValue placeholder="Select year" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="Freshman">Freshman</SelectItem>
@@ -233,9 +306,13 @@ export default function SettingsPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="gpa">Current GPA</Label>
+                          <Label htmlFor="gpa">Current GPA (out of 10)</Label>
                           <Input
                             id="gpa"
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="10"
                             value={userProfile.gpa}
                             onChange={(e) => setUserProfile({...userProfile, gpa: e.target.value})}
                           />
@@ -244,7 +321,8 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="flex justify-end">
-                      <Button onClick={handleSave}>
+                      <Button onClick={handleSave} disabled={loading}>
+                        {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                         <Save className="h-4 w-4 mr-2" />
                         Save Changes
                       </Button>

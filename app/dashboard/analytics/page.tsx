@@ -26,6 +26,8 @@ import { TrendingUp, TrendingDown, Target, Award, BookOpen, Clock } from "lucide
 export default function AnalyticsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -33,47 +35,141 @@ export default function AnalyticsPage() {
       router.push("/auth/signin");
       return;
     }
+    
+    loadAnalyticsData();
   }, [status, router]);
 
-  // Mock data for analytics
-  const gradeData = [
-    { month: "Sep", grade: 85, target: 90 },
-    { month: "Oct", grade: 88, target: 90 },
-    { month: "Nov", grade: 92, target: 90 },
-    { month: "Dec", grade: 87, target: 90 },
-    { month: "Jan", grade: 91, target: 90 },
-    { month: "Feb", grade: 94, target: 90 },
-  ];
+  const loadAnalyticsData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load user profile for GPA
+      const profileResponse = await fetch("/api/user/profile");
+      const profileData = await profileResponse.json();
+      
+      // Load grades for trend analysis
+      const gradesResponse = await fetch("/api/grades");
+      const gradesData = await gradesResponse.json();
+      
+      // Load courses for performance analysis
+      const coursesResponse = await fetch("/api/courses");
+      const coursesData = await coursesResponse.json();
+      
+      // Load assignments for completion analysis
+      const assignmentsResponse = await fetch("/api/assignments");
+      const assignmentsData = await assignmentsResponse.json();
 
-  const coursePerformance = [
-    { course: "Web Dev", grade: 94, assignments: 8 },
-    { course: "Database", grade: 88, assignments: 6 },
-    { course: "Data Struct", grade: 91, assignments: 7 },
-    { course: "Software Eng", grade: 87, assignments: 5 },
-    { course: "Networks", grade: 89, assignments: 4 },
-  ];
+      // Process data for charts
+      const grades = gradesData.grades || [];
+      const courses = Array.isArray(coursesData) ? coursesData : coursesData.courses || [];
+      const assignments = assignmentsData.assignments || [];
 
-  const timeDistribution = [
-    { name: "Studying", value: 40, color: "#3B82F6" },
-    { name: "Assignments", value: 30, color: "#10B981" },
-    { name: "Projects", value: 20, color: "#F59E0B" },
-    { name: "Exams", value: 10, color: "#EF4444" },
-  ];
+      // Grade trend data
+      const gradeData = grades.map((grade: any, index: number) => ({
+        name: grade.assignment?.title?.substring(0, 10) || `Assignment ${index + 1}`,
+        grade: Math.round(grade.percentage),
+        target: 85,
+      }));
 
-  const weeklyProgress = [
-    { week: "Week 1", completed: 12, total: 15 },
-    { week: "Week 2", completed: 14, total: 16 },
-    { week: "Week 3", completed: 13, total: 14 },
-    { week: "Week 4", completed: 16, total: 18 },
-  ];
+      // Course performance data
+      const coursePerformance = courses.map((course: any) => {
+        const courseGrades = grades.filter((g: any) => g.courseId === course.id);
+        const avgGrade = courseGrades.length > 0 
+          ? courseGrades.reduce((sum: number, g: any) => sum + g.percentage, 0) / courseGrades.length
+          : 0;
+        
+        return {
+          course: course.code || course.name?.substring(0, 8),
+          grade: Math.round(avgGrade),
+          assignments: course.assignments?.length || 0,
+        };
+      });
 
-  if (status === "loading") {
+      // Time distribution (based on assignment types)
+      const assignmentTypes = assignments.reduce((acc: any, assignment: any) => {
+        acc[assignment.type] = (acc[assignment.type] || 0) + 1;
+        return acc;
+      }, {});
+
+      const timeDistribution = Object.entries(assignmentTypes).map(([type, count]: [string, any]) => ({
+        name: type.charAt(0).toUpperCase() + type.slice(1),
+        value: count,
+        color: getTypeColor(type),
+      }));
+
+      // Weekly progress (last 4 weeks of assignments)
+      const now = new Date();
+      const weeklyProgress = [];
+      for (let i = 3; i >= 0; i--) {
+        const weekStart = new Date(now.getTime() - (i * 7 * 24 * 60 * 60 * 1000));
+        const weekEnd = new Date(weekStart.getTime() + (7 * 24 * 60 * 60 * 1000));
+        
+        const weekAssignments = assignments.filter((a: any) => {
+          const dueDate = new Date(a.dueDate);
+          return dueDate >= weekStart && dueDate < weekEnd;
+        });
+        
+        const completed = weekAssignments.filter((a: any) => a.completed).length;
+        
+        weeklyProgress.push({
+          week: `Week ${4 - i}`,
+          completed,
+          total: weekAssignments.length,
+        });
+      }
+
+      setAnalyticsData({
+        user: profileData.user,
+        gradeData,
+        coursePerformance,
+        timeDistribution,
+        weeklyProgress,
+        totalAssignments: assignments.length,
+        completedAssignments: assignments.filter((a: any) => a.completed).length,
+        averageGrade: grades.length > 0 
+          ? Math.round(grades.reduce((sum: number, g: any) => sum + g.percentage, 0) / grades.length)
+          : 0,
+      });
+      
+    } catch (error) {
+      console.error("Failed to load analytics data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case "assignment": return "#3B82F6";
+      case "quiz": return "#10B981";
+      case "exam": return "#EF4444";
+      case "project": return "#8B5CF6";
+      default: return "#6B7280";
+    }
+  };
+
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
+
+  if (!analyticsData) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="p-6">
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No analytics data available</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const { user, gradeData, coursePerformance, timeDistribution, weeklyProgress } = analyticsData;
 
   return (
     <div className="min-h-screen bg-background">
@@ -96,8 +192,10 @@ export default function AnalyticsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3.7</div>
-              <p className="text-xs text-green-600">+0.2 from last semester</p>
+              <div className="text-2xl font-bold">{user?.gpa || 'N/A'}</div>
+              <p className="text-xs text-green-600">
+                {user?.gpa ? `Out of 10.0` : 'Set in profile'}
+              </p>
             </CardContent>
           </Card>
 
@@ -109,34 +207,40 @@ export default function AnalyticsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">92%</div>
-              <p className="text-xs text-blue-600">Above target of 85%</p>
+              <div className="text-2xl font-bold">
+                {analyticsData.totalAssignments > 0 
+                  ? Math.round((analyticsData.completedAssignments / analyticsData.totalAssignments) * 100)
+                  : 0}%
+              </div>
+              <p className="text-xs text-blue-600">
+                {analyticsData.completedAssignments}/{analyticsData.totalAssignments} assignments
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Study Hours</CardTitle>
-                <Clock className="h-4 w-4 text-purple-600" />
+                <CardTitle className="text-sm font-medium">Average Grade</CardTitle>
+                <BookOpen className="h-4 w-4 text-purple-600" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">28h</div>
-              <p className="text-xs text-purple-600">This week</p>
+              <div className="text-2xl font-bold">{analyticsData.averageGrade}%</div>
+              <p className="text-xs text-purple-600">Across all assignments</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Achievements</CardTitle>
+                <CardTitle className="text-sm font-medium">Academic Year</CardTitle>
                 <Award className="h-4 w-4 text-orange-600" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-orange-600">Goals completed</p>
+              <div className="text-2xl font-bold">{user?.year || 'N/A'}</div>
+              <p className="text-xs text-orange-600">{user?.major || 'Set major in profile'}</p>
             </CardContent>
           </Card>
         </div>
@@ -144,108 +248,116 @@ export default function AnalyticsPage() {
         {/* Charts Grid */}
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Grade Trend */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Grade Trend</CardTitle>
-              <CardDescription>Your academic performance over time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={gradeData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis domain={[70, 100]} />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="grade"
-                    stroke="#3B82F6"
-                    strokeWidth={3}
-                    dot={{ fill: "#3B82F6", strokeWidth: 2, r: 4 }}
-                    name="Your Grade"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="target"
-                    stroke="#EF4444"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="Target"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          {gradeData.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Grade Trend</CardTitle>
+                <CardDescription>Your academic performance over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={gradeData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="grade"
+                      stroke="#3B82F6"
+                      strokeWidth={3}
+                      dot={{ fill: "#3B82F6", strokeWidth: 2, r: 4 }}
+                      name="Your Grade"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="target"
+                      stroke="#EF4444"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name="Target"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Course Performance */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Course Performance</CardTitle>
-              <CardDescription>Grades by course</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={coursePerformance}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="course" />
-                  <YAxis domain={[70, 100]} />
-                  <Tooltip />
-                  <Bar dataKey="grade" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          {coursePerformance.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Course Performance</CardTitle>
+                <CardDescription>Average grades by course</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={coursePerformance}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="course" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip />
+                    <Bar dataKey="grade" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Time Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Study Time Distribution</CardTitle>
-              <CardDescription>How you spend your study time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={timeDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {timeDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          {/* Assignment Distribution */}
+          {timeDistribution.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Assignment Distribution</CardTitle>
+                <CardDescription>Types of assignments you have</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={timeDistribution}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {timeDistribution.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Weekly Progress */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Weekly Progress</CardTitle>
-              <CardDescription>Assignment completion by week</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={weeklyProgress}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="completed" fill="#10B981" name="Completed" />
-                  <Bar dataKey="total" fill="#E5E7EB" name="Total" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          {weeklyProgress.some((w: any) => w.total > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Weekly Progress</CardTitle>
+                <CardDescription>Assignment completion by week</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={weeklyProgress}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="week" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="completed" fill="#10B981" name="Completed" />
+                    <Bar dataKey="total" fill="#E5E7EB" name="Total" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Performance Insights */}
@@ -255,18 +367,32 @@ export default function AnalyticsPage() {
               <CardTitle className="text-lg">Strengths</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm">Consistent assignment submission</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm">Strong performance in Web Development</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm">Improving grade trend</span>
-              </div>
+              {analyticsData.averageGrade >= 85 && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">High average grade performance</span>
+                </div>
+              )}
+              {(analyticsData.completedAssignments / analyticsData.totalAssignments) >= 0.8 && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Consistent assignment completion</span>
+                </div>
+              )}
+              {user?.gpa >= 3.5 && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Strong overall GPA</span>
+                </div>
+              )}
+              {(!analyticsData.averageGrade || analyticsData.averageGrade < 85) && 
+               (!user?.gpa || user.gpa < 3.5) && 
+               (analyticsData.completedAssignments / analyticsData.totalAssignments) < 0.8 && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Getting started with academic tracking</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -275,18 +401,30 @@ export default function AnalyticsPage() {
               <CardTitle className="text-lg">Areas for Improvement</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-sm">Time management for large projects</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-sm">Software Engineering course focus</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-sm">Exam preparation strategy</span>
-              </div>
+              {analyticsData.averageGrade < 85 && analyticsData.averageGrade > 0 && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span className="text-sm">Focus on improving assignment grades</span>
+                </div>
+              )}
+              {(analyticsData.completedAssignments / analyticsData.totalAssignments) < 0.8 && analyticsData.totalAssignments > 0 && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span className="text-sm">Increase assignment completion rate</span>
+                </div>
+              )}
+              {user?.gpa && user.gpa < 3.5 && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span className="text-sm">Work on overall GPA improvement</span>
+                </div>
+              )}
+              {analyticsData.totalAssignments === 0 && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span className="text-sm">Add assignments to track progress</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -297,15 +435,15 @@ export default function AnalyticsPage() {
             <CardContent className="space-y-3">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm">Schedule weekly review sessions</span>
+                <span className="text-sm">Set up regular study schedule</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm">Join study groups for challenging courses</span>
+                <span className="text-sm">Track all assignments and deadlines</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm">Set up office hours with professors</span>
+                <span className="text-sm">Review analytics weekly for insights</span>
               </div>
             </CardContent>
           </Card>
