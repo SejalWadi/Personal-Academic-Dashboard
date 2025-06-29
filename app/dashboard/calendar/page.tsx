@@ -122,6 +122,20 @@ export default function CalendarPage() {
     }
   };
 
+  // Helper function to get the date from either assignment or event
+  const getItemDate = (item: Assignment | Event): Date => {
+    if ('dueDate' in item) {
+      return new Date(item.dueDate);
+    } else {
+      return new Date(item.date);
+    }
+  };
+
+  // Helper function to check if item is an assignment
+  const isAssignment = (item: Assignment | Event): item is Assignment => {
+    return 'dueDate' in item;
+  };
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -216,8 +230,12 @@ export default function CalendarPage() {
                               key={item.id}
                               className="text-xs p-1 rounded truncate"
                               style={{ 
-                                backgroundColor: item.type ? getEventTypeColor(item.type) + '20' : (item.course?.color + '20'),
-                                color: item.type ? getEventTypeColor(item.type) : item.course?.color 
+                                backgroundColor: isAssignment(item) 
+                                  ? (item.course?.color + '20') 
+                                  : (getEventTypeColor(item.type) + '20'),
+                                color: isAssignment(item) 
+                                  ? item.course?.color 
+                                  : getEventTypeColor(item.type)
                               }}
                             >
                               {item.title}
@@ -274,11 +292,13 @@ export default function CalendarPage() {
                           <div>
                             <h4 className="font-medium text-sm">{item.title}</h4>
                             <p className="text-xs text-muted-foreground">
-                              {item.course ? `${item.course.name} • ${item.points} points` : 
-                               item.type ? `${item.type} • ${item.duration}min` : ''}
+                              {isAssignment(item) 
+                                ? `${item.course?.name} • ${item.points} points`
+                                : `${item.type} • ${item.duration}min`
+                              }
                             </p>
                           </div>
-                          {item.priority && (
+                          {isAssignment(item) && item.priority && (
                             <Badge variant={getPriorityColor(item.priority)} className="text-xs">
                               {item.priority}
                             </Badge>
@@ -299,12 +319,12 @@ export default function CalendarPage() {
               <CardContent className="space-y-3">
                 {[...assignments, ...events]
                   .filter(item => {
-                    const itemDate = new Date(item.dueDate || item.date);
+                    const itemDate = getItemDate(item);
                     return itemDate >= new Date();
                   })
                   .sort((a, b) => {
-                    const dateA = new Date(a.dueDate || a.date);
-                    const dateB = new Date(b.dueDate || b.date);
+                    const dateA = getItemDate(a);
+                    const dateB = getItemDate(b);
                     return dateA.getTime() - dateB.getTime();
                   })
                   .slice(0, 5)
@@ -313,17 +333,21 @@ export default function CalendarPage() {
                       <div>
                         <h4 className="font-medium text-sm">{item.title}</h4>
                         <p className="text-xs text-muted-foreground">
-                          {item.course?.code || item.type} • {format(new Date(item.dueDate || item.date), 'MMM d')}
+                          {isAssignment(item) ? item.course?.code : item.type} • {format(getItemDate(item), 'MMM d')}
                         </p>
                       </div>
                       <div
                         className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: item.course?.color || getEventTypeColor(item.type) }}
+                        style={{ 
+                          backgroundColor: isAssignment(item) 
+                            ? item.course?.color 
+                            : getEventTypeColor(item.type) 
+                        }}
                       />
                     </div>
                   ))}
                 {[...assignments, ...events].filter(item => {
-                  const itemDate = new Date(item.dueDate || item.date);
+                  const itemDate = getItemDate(item);
                   return itemDate >= new Date();
                 }).length === 0 && (
                   <p className="text-muted-foreground text-sm text-center py-4">
