@@ -32,6 +32,7 @@ export interface Assignment {
   points: number;
   completed: boolean;
   priority: string;
+  courseId: string;
   course?: Course;
   grade?: Grade;
 }
@@ -43,6 +44,8 @@ export interface Grade {
   percentage: number;
   letterGrade?: string;
   feedback?: string;
+  assignmentId: string;
+  courseId: string;
   course?: Course;
   assignment?: Assignment;
 }

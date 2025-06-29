@@ -57,7 +57,7 @@ export default function EditAssignmentModal({
     dueDate: new Date(assignment.dueDate).toISOString().slice(0, 16),
     points: assignment.points,
     priority: assignment.priority,
-    courseId: assignment.courseId,
+    courseId: assignment.course?.id || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -221,7 +221,7 @@ export default function EditAssignmentModal({
                 onValueChange={(value) => setFormData({ ...formData, courseId: value })}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select a course" />
                 </SelectTrigger>
                 <SelectContent>
                   {courses.map((course) => (
