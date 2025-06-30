@@ -191,7 +191,7 @@ MIT License — Free to use for personal, educational, and commercial use.
 
 ## 🙌 Credits
 
-Built with ❤️ by **Your Name**
+Built with ❤️ by **Sejal Wadibhasme**
 
 Special thanks to the open-source community behind:
 - [Next.js](https://nextjs.org/)
